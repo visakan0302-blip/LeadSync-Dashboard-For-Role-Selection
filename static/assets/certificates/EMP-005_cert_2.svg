@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <defs>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="sealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <pattern id="bgGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="560" fill="#ffffff" rx="12"/>
+  <rect width="800" height="560" fill="url(#bgGrid)" rx="12"/>
+
+  <!-- Borders -->
+  <rect x="24" y="24" width="752" height="512" rx="8" fill="none" stroke="url(#borderGrad)" stroke-width="6"/>
+  <rect x="36" y="36" width="728" height="488" rx="6" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="6 4"/>
+
+  <!-- Header Banner -->
+  <text x="400" y="85" font-family="'Segoe UI', Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#6366f1" text-anchor="middle" letter-spacing="4">OFFICIAL ACCREDITATION CERTIFICATE</text>
+  <text x="400" y="125" font-family="'Georgia', serif" font-size="28" font-weight="bold" fill="#0f172a" text-anchor="middle">CERTIFICATE OF ACHIEVEMENT</text>
+  <line x1="280" y1="140" x2="520" y2="140" stroke="url(#borderGrad)" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Recipient -->
+  <text x="400" y="180" font-family="'Segoe UI', Arial, sans-serif" font-size="14" fill="#64748b" text-anchor="middle">This credential is formally granted to</text>
+  <text x="400" y="225" font-family="'Georgia', serif" font-size="30" font-weight="bold" fill="#1e1b4b" text-anchor="middle">David Kim</text>
+  <text x="400" y="255" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#475569" text-anchor="middle">Systems Analyst &bull; LeadSync Talent Network &bull; ID: EMP-005</text>
+
+  <!-- Certification Name -->
+  <text x="400" y="300" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">in professional mastery and successful completion of</text>
+  <rect x="100" y="315" width="600" height="60" rx="8" fill="#f8fafc" stroke="#c7d2fe" stroke-width="1.5"/>
+  <text x="400" y="352" font-family="'Segoe UI', Inter, Arial, sans-serif" font-size="19" font-weight="800" fill="#4338ca" text-anchor="middle">Linux Foundation Certified System Administrator (LFCS)</text>
+
+  <!-- Seal / Stamp -->
+  <g transform="translate(100, 400)">
+    <circle cx="45" cy="45" r="40" fill="url(#sealGrad)" opacity="0.15"/>
+    <circle cx="45" cy="45" r="34" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="4 2"/>
+    <circle cx="45" cy="45" r="26" fill="none" stroke="#d97706" stroke-width="1.5"/>
+    <polygon points="45,26 49,38 61,38 51,46 55,58 45,50 35,58 39,46 29,38 41,38" fill="#d97706"/>
+    <text x="45" y="72" font-family="sans-serif" font-size="8" font-weight="bold" fill="#b45309" text-anchor="middle" letter-spacing="1">VERIFIED</text>
+  </g>
+
+  <!-- Signatures -->
+  <g transform="translate(250, 425)">
+    <line x1="0" y1="40" x2="160" y2="40" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 10 35 Q 40 10 70 30 T 130 25" fill="none" stroke="#334155" stroke-width="2"/>
+    <text x="80" y="58" font-family="sans-serif" font-size="11" font-weight="600" fill="#1e293b" text-anchor="middle">Director of Accreditation</text>
+    <text x="80" y="72" font-family="sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Certification Board</text>
+  </g>
+
+  <g transform="translate(490, 425)">
+    <line x1="0" y1="40" x2="160" y2="40" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 15 32 Q 50 15 85 35 T 145 28" fill="none" stroke="#334155" stroke-width="2"/>
+    <text x="80" y="58" font-family="sans-serif" font-size="11" font-weight="600" fill="#1e293b" text-anchor="middle">Technical Examiner</text>
+    <text x="80" y="72" font-family="sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Issue Date: Oct 2026</text>
+  </g>
+
+  <!-- Bottom Details -->
+  <text x="400" y="525" font-family="sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">Credential ID: CR-EMP-005-2178 &bull; Authenticity Hash: 8f9b4c &bull; LeadSync AI Talent Registry</text>
+</svg>

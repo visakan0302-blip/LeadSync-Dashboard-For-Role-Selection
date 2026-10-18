@@ -1,0 +1,1004 @@
+{
+  "employees": [
+    {
+      "id": "EMP-001",
+      "name": "Alex Rivera",
+      "role": "Lead Software Engineer",
+      "department": "Engineering",
+      "email": "alex.rivera@leadsync.io",
+      "experience_years": 4.5,
+      "avatar": "AR",
+      "bio": "Senior core developer.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Computer Science - University of Washington",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-002",
+      "name": "Priya Sharma",
+      "role": "Frontend Engineer",
+      "department": "Engineering",
+      "email": "priya.sharma@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "PS",
+      "bio": "Employee in Engineering department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.Tech in Information Technology - IIT Madras",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-003",
+      "name": "Marcus Chen",
+      "role": "Backend Developer",
+      "department": "Engineering",
+      "email": "marcus.chen@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "MC",
+      "bio": "Employee in Engineering department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "M.S. in Computer Engineering - Georgia Tech",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-004",
+      "name": "Sarah Jenkins",
+      "role": "Full Stack Engineer",
+      "department": "Product Engineering",
+      "email": "sarah.jenkins@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "SJ",
+      "bio": "Employee in Product Engineering department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Software Engineering - Cal Poly SLO",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-005",
+      "name": "David Kim",
+      "role": "Systems Analyst",
+      "department": "Infrastructure",
+      "email": "david.kim@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "DK",
+      "bio": "Employee in Infrastructure department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Computer Systems Engineering - Purdue University",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-006",
+      "name": "Elena Rostova",
+      "role": "Junior AI Developer",
+      "department": "AI & Research",
+      "email": "elena.rostova@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "ER",
+      "bio": "Employee in AI & Research department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "M.S. in Artificial Intelligence - Carnegie Mellon University",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-007",
+      "name": "James Wilson",
+      "role": "Cloud & Infrastructure Associate",
+      "department": "DevOps",
+      "email": "james.wilson@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "JW",
+      "bio": "Employee in DevOps department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Computer Networks & Cybersecurity - University of Maryland",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-008",
+      "name": "Ananya Patel",
+      "role": "Data Analyst",
+      "department": "Data & Analytics",
+      "email": "ananya.patel@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "AP",
+      "bio": "Employee in Data & Analytics department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Statistics & Economics - UC Berkeley",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-009",
+      "name": "Carlos Gomez",
+      "role": "Database Support Engineer",
+      "department": "Infrastructure",
+      "email": "carlos.gomez@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "CG",
+      "bio": "Employee in Infrastructure department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Information Systems - Texas A&M",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-010",
+      "name": "Rachel Green",
+      "role": "QA & Automation Engineer",
+      "department": "Quality Engineering",
+      "email": "rachel.green@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "RG",
+      "bio": "Employee in Quality Engineering department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Software Development - Arizona State University",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-011",
+      "name": "Michael Chang",
+      "role": "DevOps Technician",
+      "department": "DevOps",
+      "email": "michael.chang@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "MC",
+      "bio": "Employee in DevOps department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Information Technology - San Jose State University",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-012",
+      "name": "Sofia Al-Mansoor",
+      "role": "Junior Project Coordinator",
+      "department": "Project Management",
+      "email": "sofia.almansoor@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "SA",
+      "bio": "Employee in Project Management department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.A. in Business Administration & IT - Boston University",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-013",
+      "name": "Liam O'Connor",
+      "role": "Software Engineer (Embedded & C)",
+      "department": "Core Systems",
+      "email": "liam.oconnor@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "LO",
+      "bio": "Employee in Core Systems department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.Eng. in Computer Systems Engineering - Trinity College Dublin",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-014",
+      "name": "Maya Lin",
+      "role": "Java Developer",
+      "department": "Enterprise Applications",
+      "email": "maya.lin@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "ML",
+      "bio": "Employee in Enterprise Applications department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "B.S. in Computer Science - University of Illinois Urbana-Champaign",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    },
+    {
+      "id": "EMP-015",
+      "name": "Vikram Malhotra",
+      "role": "Associate Solutions Architect",
+      "department": "Architecture",
+      "email": "vikram.malhotra@leadsync.io",
+      "experience_years": 0.0,
+      "avatar": "VM",
+      "bio": "Employee in Architecture department. Profile awaiting HR assessment and evaluation.",
+      "skills": {},
+      "projects": [],
+      "certifications": [],
+      "education": "M.S. in Software Systems - National University of Singapore",
+      "assessment_scores": {
+        "completed": false,
+        "date": null,
+        "score_pct": 0,
+        "correct_count": 0,
+        "total_questions": 20,
+        "category_scores": {}
+      },
+      "appointed_role": null
+    }
+  ],
+  "leadership_roles": [
+    {
+      "id": "ROLE-SSE",
+      "title": "Senior Software Engineer",
+      "department": "Core Engineering",
+      "description": "Leads system design, core codebase architecture, code reviews, and mentors mid & junior developers across full-stack and backend systems.",
+      "target_experience_years": 4.0,
+      "benchmark_skills": {
+        "Python": 85,
+        "Java": 85,
+        "C": 75,
+        "DBMS": 85,
+        "Architecture": 88,
+        "Cloud/DevOps": 78,
+        "Communication": 75,
+        "Aptitude": 85,
+        "Leadership": 72
+      },
+      "weight_factors": {
+        "technical": 0.4,
+        "architecture": 0.25,
+        "projects": 0.15,
+        "assessment": 0.1,
+        "experience": 0.1
+      },
+      "responsibilities": [
+        "Architect resilient, modular software systems and microservices",
+        "Establish coding standards and conduct thorough peer reviews",
+        "Solve complex concurrency, caching, and performance bottlenecks",
+        "Mentor junior engineers and champion engineering excellence"
+      ]
+    },
+    {
+      "id": "ROLE-AIML",
+      "title": "AI/ML Engineer",
+      "department": "AI & Advanced Analytics",
+      "description": "Designs, trains, and deploys machine learning models, predictive scoring pipelines, and intelligent automation systems into production.",
+      "target_experience_years": 3.0,
+      "benchmark_skills": {
+        "Python": 92,
+        "DBMS": 85,
+        "Architecture": 80,
+        "Aptitude": 92,
+        "Cloud/DevOps": 75,
+        "Java": 65,
+        "C": 60,
+        "Communication": 75,
+        "Leadership": 65
+      },
+      "weight_factors": {
+        "technical": 0.45,
+        "aptitude": 0.25,
+        "projects": 0.15,
+        "assessment": 0.1,
+        "experience": 0.05
+      },
+      "responsibilities": [
+        "Formulate and train machine learning and neural network models",
+        "Design vector databases, embeddings, and feature stores",
+        "Deploy inference endpoints with low latency SLA",
+        "Collaborate with data engineers on ETL and data quality pipelines"
+      ]
+    },
+    {
+      "id": "ROLE-DEVOPS",
+      "title": "DevOps Engineer",
+      "department": "Cloud & Infrastructure",
+      "description": "Orchestrates CI/CD pipelines, container orchestration (Kubernetes), Infrastructure as Code (Terraform), and high-availability cloud systems.",
+      "target_experience_years": 3.5,
+      "benchmark_skills": {
+        "Cloud/DevOps": 92,
+        "Architecture": 84,
+        "DBMS": 80,
+        "Python": 80,
+        "C": 65,
+        "Java": 68,
+        "Aptitude": 85,
+        "Communication": 75,
+        "Leadership": 70
+      },
+      "weight_factors": {
+        "technical": 0.45,
+        "devops": 0.25,
+        "projects": 0.15,
+        "assessment": 0.1,
+        "experience": 0.05
+      },
+      "responsibilities": [
+        "Manage multi-cluster Kubernetes environments and automated scaling",
+        "Build robust zero-downtime CI/CD canary deployment pipelines",
+        "Oversee cloud infrastructure security, secrets, and compliance",
+        "Drive telemetry, alerting, and incident response automation"
+      ]
+    },
+    {
+      "id": "ROLE-DBA",
+      "title": "Database Administrator",
+      "department": "Data & Platform Reliability",
+      "description": "Guarantees enterprise database performance, indexing strategies, ACID consistency, high-availability failover, and disaster recovery.",
+      "target_experience_years": 4.0,
+      "benchmark_skills": {
+        "DBMS": 95,
+        "Architecture": 85,
+        "Cloud/DevOps": 80,
+        "C": 72,
+        "Python": 75,
+        "Java": 70,
+        "Aptitude": 88,
+        "Communication": 74,
+        "Leadership": 68
+      },
+      "weight_factors": {
+        "dbms": 0.45,
+        "architecture": 0.2,
+        "projects": 0.15,
+        "assessment": 0.1,
+        "experience": 0.1
+      },
+      "responsibilities": [
+        "Tune query performance, execution plans, and index structures",
+        "Administer multi-master and read-replica replication topologies",
+        "Ensure automated Point-In-Time recovery and zero-loss backups",
+        "Manage enterprise data encryption, RBAC, and audit logs"
+      ]
+    },
+    {
+      "id": "ROLE-PM",
+      "title": "Project Team Leader (Project Manager)",
+      "department": "Engineering Management & Delivery",
+      "description": "Leads engineering delivery squads, aligns technical roadmaps with business goals, manages stakeholders, resolves blockers, and inspires team success.",
+      "target_experience_years": 4.5,
+      "benchmark_skills": {
+        "Leadership": 92,
+        "Communication": 95,
+        "Aptitude": 90,
+        "Architecture": 80,
+        "DBMS": 70,
+        "Python": 70,
+        "Java": 70,
+        "Cloud/DevOps": 70,
+        "C": 55
+      },
+      "weight_factors": {
+        "leadership": 0.35,
+        "communication": 0.3,
+        "projects": 0.15,
+        "aptitude": 0.1,
+        "experience": 0.1
+      },
+      "responsibilities": [
+        "Facilitate agile sprints, backlog grooming, and milestone delivery",
+        "Serve as the primary liaison between business stakeholders and engineers",
+        "Proactively identify technical delivery risks and unblock dependencies",
+        "Foster team psychological safety, morale, and performance growth"
+      ]
+    }
+  ],
+  "question_bank": [
+    {
+      "id": "Q-PY-01",
+      "category": "Python",
+      "question": "In Python 3.14+, what is the primary benefit of the Deferred Evaluation of Annotations (PEP 649)?",
+      "options": [
+        "Annotations are never evaluated, saving memory completely",
+        "Annotations are evaluated lazily on demand into functions/descriptors, preventing forward reference errors",
+        "All annotations are strictly converted into C types at compile time",
+        "It deprecates typing modules in favor of runtime duck typing"
+      ],
+      "answer_index": 1,
+      "explanation": "PEP 649 in modern Python provides deferred evaluation of annotations, creating a separate code object evaluated lazily only when __annotations__ is accessed."
+    },
+    {
+      "id": "Q-PY-02",
+      "category": "Python",
+      "question": "What is the output of the expression: `[x for x in (1, 2, 3) if x % 2 != 0]` in Python?",
+      "options": [
+        "[2]",
+        "[1, 3]",
+        "(1, 3)",
+        "TypeError: tuple has no comprehension"
+      ],
+      "answer_index": 1,
+      "explanation": "List comprehensions iterate over any iterable (including tuples) and filter using the 'if' condition, producing `[1, 3]`."
+    },
+    {
+      "id": "Q-PY-03",
+      "category": "Python",
+      "question": "How does Python's Global Interpreter Lock (GIL) impact multithreaded CPU-bound tasks in standard CPython?",
+      "options": [
+        "It allows true multicore parallel execution of CPU-bound Python bytecodes",
+        "It restricts execution to one native thread executing Python bytecode at a time",
+        "It turns CPU-bound tasks automatically into asynchronous coroutines",
+        "It only applies to I/O operations, not CPU calculations"
+      ],
+      "answer_index": 1,
+      "explanation": "The GIL ensures only one thread executes CPython bytecode at a time, making multiprocessing or free-threaded builds necessary for CPU-bound parallelism."
+    },
+    {
+      "id": "Q-PY-04",
+      "category": "Python",
+      "question": "Which Python decorator is used to cache the results of a pure function based on its positional and keyword arguments?",
+      "options": [
+        "@functools.memoize",
+        "@functools.lru_cache",
+        "@functools.cache_result",
+        "@functools.singleton"
+      ],
+      "answer_index": 1,
+      "explanation": "`functools.lru_cache` (or `functools.cache`) wraps a function with a memoizing callable that saves recent calls."
+    },
+    {
+      "id": "Q-PY-05",
+      "category": "Python",
+      "question": "In Python dictionary implementation, what is the average time complexity for key lookup and insertion?",
+      "options": [
+        "O(log n)",
+        "O(n)",
+        "O(1)",
+        "O(n log n)"
+      ],
+      "answer_index": 2,
+      "explanation": "Python dicts use an optimized compact hash table offering O(1) average time complexity for lookup and insert operations."
+    },
+    {
+      "id": "Q-PY-06",
+      "category": "Python",
+      "question": "What happens when a generator function in Python encounters a `return val` statement?",
+      "options": [
+        "The generator yields val indefinitely",
+        "A StopIteration(val) exception is raised carrying val as its value",
+        "It causes a runtime SyntaxError",
+        "The return value is ignored completely"
+      ],
+      "answer_index": 1,
+      "explanation": "In Python generators, returning a value raises `StopIteration` with the returned value stored in `exception.value`."
+    },
+    {
+      "id": "Q-PY-07",
+      "category": "Python",
+      "question": "What is the key difference between `is` and `==` in Python?",
+      "options": [
+        "`is` checks for value equality; `==` checks for memory identity",
+        "`is` checks memory object identity; `==` checks value/equality equivalence",
+        "There is no difference; they are interchangeable aliases",
+        "`is` is only valid for boolean comparison"
+      ],
+      "answer_index": 1,
+      "explanation": "`is` checks if two variables point to the exact same object in memory (`id(a) == id(b)`), whereas `==` calls `__eq__` to compare values."
+    },
+    {
+      "id": "Q-PY-08",
+      "category": "Python",
+      "question": "What is the purpose of `__slots__` in a Python class definition?",
+      "options": [
+        "To define private variables that cannot be inherited",
+        "To restrict instance attributes to a fixed set, reducing memory overhead by avoiding `__dict__`",
+        "To automatically generate getter and setter properties",
+        "To enforce thread-safe locks on instance variables"
+      ],
+      "answer_index": 1,
+      "explanation": "`__slots__` reserves space for a declared set of attributes, eliminating the per-instance `__dict__` and saving significant memory."
+    },
+    {
+      "id": "Q-C-01",
+      "category": "C",
+      "question": "In C, what is the consequence of dereferencing a dangling pointer?",
+      "options": [
+        "The compiler guarantees a compile-time error",
+        "Undefined behavior: potential crash, data corruption, or security exploit",
+        "The operating system automatically allocates new memory at that location",
+        "It returns 0 (NULL) safely"
+      ],
+      "answer_index": 1,
+      "explanation": "Accessing memory through a pointer after that memory has been freed invokes Undefined Behavior (UB)."
+    },
+    {
+      "id": "Q-C-02",
+      "category": "C",
+      "question": "What is the difference between `malloc()` and `calloc()` in the standard C library?",
+      "options": [
+        "`malloc` zero-initializes memory; `calloc` leaves it uninitialized",
+        "`calloc` allocates contiguous memory and zero-initializes it; `malloc` leaves memory uninitialized",
+        "`malloc` is for arrays; `calloc` is for structs",
+        "`calloc` allocates on stack; `malloc` allocates on heap"
+      ],
+      "answer_index": 1,
+      "explanation": "`calloc(n, size)` allocates and clears all bytes to zero; `malloc(size)` allocates memory containing indeterminate/garbage values."
+    },
+    {
+      "id": "Q-C-03",
+      "category": "C",
+      "question": "In C, what does the `volatile` keyword inform the compiler about a variable?",
+      "options": [
+        "The variable is strictly read-only and immutable",
+        "The variable may be modified unexpectedly by external hardware or concurrent threads, disabling caching optimizations",
+        "The variable is stored permanently in the CPU cache registers",
+        "The variable will be deleted immediately after execution leaves the scope"
+      ],
+      "answer_index": 1,
+      "explanation": "`volatile` prevents the compiler from optimizing out reads/writes, signaling the value can change outside the compiler's control (e.g., hardware registers)."
+    },
+    {
+      "id": "Q-C-04",
+      "category": "C",
+      "question": "What does `sizeof(char)` evaluate to in standard C according to the ISO C specification?",
+      "options": [
+        "Always 1",
+        "Depends on 32-bit or 64-bit architecture",
+        "4 bytes",
+        "Undefined behavior"
+      ],
+      "answer_index": 0,
+      "explanation": "By definition in the ISO C specification, `sizeof(char)` is always strictly 1 byte."
+    },
+    {
+      "id": "Q-C-05",
+      "category": "C",
+      "question": "What is the return value of `fork()` in the child process in POSIX C systems?",
+      "options": [
+        "The Process ID (PID) of the parent",
+        "0",
+        "-1",
+        "The Process ID (PID) of the child"
+      ],
+      "answer_index": 1,
+      "explanation": "Upon successful execution of `fork()`, 0 is returned to the child process, and the child's PID is returned to the parent process."
+    },
+    {
+      "id": "Q-C-06",
+      "category": "C",
+      "question": "What is a memory leak in C and how is it detected and mitigated?",
+      "options": [
+        "Allocating stack memory without pop; fixed by rebooting",
+        "Failing to `free()` dynamically allocated heap memory; detected with tools like Valgrind and sanitizers",
+        "Using too many global static variables",
+        "Passing pointers by value instead of reference"
+      ],
+      "answer_index": 1,
+      "explanation": "A memory leak happens when heap memory allocated with malloc/calloc is never freed, detectable using Valgrind, ASan, or leak diagnostics."
+    },
+    {
+      "id": "Q-JV-01",
+      "category": "Java",
+      "question": "In Java, what is the difference between `HashMap` and `ConcurrentHashMap`?",
+      "options": [
+        "`HashMap` is thread-safe using global synchronization; `ConcurrentHashMap` is not",
+        "`ConcurrentHashMap` allows concurrent thread reads and segmented/bucket-level locks for thread-safe writes",
+        "`HashMap` does not allow null keys; `ConcurrentHashMap` allows multiple null keys",
+        "`ConcurrentHashMap` is deprecated in favor of `Hashtable`"
+      ],
+      "answer_index": 1,
+      "explanation": "`ConcurrentHashMap` provides high concurrency via CAS operations and lock-free reads without locking the entire map like Hashtable."
+    },
+    {
+      "id": "Q-JV-02",
+      "category": "Java",
+      "question": "What does the `transient` keyword signify when applied to a field in a Java class?",
+      "options": [
+        "The field cannot be modified once initialized",
+        "The field is omitted and not serialized during Java Object Serialization",
+        "The field is shared among all threads via CPU cache coherency",
+        "The field will be garbage-collected immediately upon method exit"
+      ],
+      "answer_index": 1,
+      "explanation": "The `transient` keyword marks member variables that should not be written to an ObjectOutputStream during object serialization."
+    },
+    {
+      "id": "Q-JV-03",
+      "category": "Java",
+      "question": "In modern Java (Java 21+), what is the key architectural purpose of Virtual Threads (Project Loom)?",
+      "options": [
+        "To replace CPU kernel threads with pure JavaScript worker threads",
+        "To provide lightweight user-mode threads managed by the JVM, scaling to millions of concurrent blocking I/O tasks",
+        "To force all Java methods to execute strictly asynchronously with reactive streams",
+        "To completely eliminate the Java Garbage Collector"
+      ],
+      "answer_index": 1,
+      "explanation": "Virtual Threads are lightweight JVM-managed threads designed to preserve the simple synchronous blocking thread-per-request model with near-zero overhead."
+    },
+    {
+      "id": "Q-JV-04",
+      "category": "Java",
+      "question": "Which of the following is true regarding `String`, `StringBuilder`, and `StringBuffer` in Java?",
+      "options": [
+        "`String` is mutable; `StringBuilder` is immutable",
+        "`StringBuilder` is mutable and unsynchronized (faster); `StringBuffer` is mutable and synchronized (thread-safe)",
+        "`StringBuffer` is faster than `StringBuilder` in single-threaded environments",
+        "All three are strictly immutable"
+      ],
+      "answer_index": 1,
+      "explanation": "`StringBuilder` is mutable and non-thread-safe for maximum speed; `StringBuffer` has synchronized methods for thread safety."
+    },
+    {
+      "id": "Q-JV-05",
+      "category": "Java",
+      "question": "What is the Java Memory Model's (JMM) guarantee regarding a `volatile` variable?",
+      "options": [
+        "It guarantees atomic operations on complex compound statements like `count++`",
+        "It guarantees happens-before visibility: writes to volatile are immediately visible to all threads reading it",
+        "It forces the object to be stored on the stack rather than heap",
+        "It prevents the garbage collector from finalizing the object"
+      ],
+      "answer_index": 1,
+      "explanation": "A volatile read/write establishes a happens-before relationship ensuring memory visibility across threads, though compound operations like count++ still require AtomicInteger or locks."
+    },
+    {
+      "id": "Q-DB-01",
+      "category": "DBMS",
+      "question": "In relational database transactions, what does the ACID acronym stand for?",
+      "options": [
+        "Availability, Consistency, Isolation, Durability",
+        "Atomicity, Consistency, Isolation, Durability",
+        "Authentication, Concurrency, Integrity, Distribution",
+        "Atomicity, Concurrency, Indexing, Data-integrity"
+      ],
+      "answer_index": 1,
+      "explanation": "ACID stands for Atomicity (all or nothing), Consistency (valid state transitions), Isolation (concurrency control), and Durability (committed data survives crashes)."
+    },
+    {
+      "id": "Q-DB-02",
+      "category": "DBMS",
+      "question": "What is the primary difference between a clustered index and a non-clustered index?",
+      "options": [
+        "A clustered index physicalizes the table's actual data order on disk; only one clustered index can exist per table",
+        "A table can have unlimited clustered indexes, but only one non-clustered index",
+        "Clustered indexes are slower than non-clustered indexes for range queries",
+        "Non-clustered indexes contain actual data rows; clustered indexes store only pointers"
+      ],
+      "answer_index": 0,
+      "explanation": "A clustered index determines the physical storage order of rows in the table; hence, a table can possess only one clustered index."
+    },
+    {
+      "id": "Q-DB-03",
+      "category": "DBMS",
+      "question": "Which transaction isolation level prevents Dirty Reads and Non-Repeatable Reads, but may still permit Phantom Reads in ANSI SQL-92?",
+      "options": [
+        "Read Uncommitted",
+        "Read Committed",
+        "Repeatable Read",
+        "Serializable"
+      ],
+      "answer_index": 2,
+      "explanation": "`Repeatable Read` locks read rows preventing modifications (preventing non-repeatable reads), but allows new inserts that match the where clause (phantom reads)."
+    },
+    {
+      "id": "Q-DB-04",
+      "category": "DBMS",
+      "question": "What is a 'Database Deadlock' and how is it resolved automatically by a modern DBMS?",
+      "options": [
+        "When the disk runs out of storage space; resolved by auto-clearing temp logs",
+        "When two or more transactions hold locks that the others need in a circular wait; resolved by detecting the cycle and aborting/rolling back a victim transaction",
+        "When an index is corrupted; resolved by dropping all foreign keys",
+        "When a query takes longer than 10 seconds; resolved by parallelizing threads"
+      ],
+      "answer_index": 1,
+      "explanation": "Deadlock occurs when concurrent transactions hold circular resource locks; database engines detect the wait-for graph cycle and abort the lowest-cost transaction."
+    },
+    {
+      "id": "Q-DB-05",
+      "category": "DBMS",
+      "question": "In database normalization, what distinguishes Third Normal Form (3NF) from Second Normal Form (2NF)?",
+      "options": [
+        "3NF eliminates partial dependency on composite primary keys",
+        "3NF is in 2NF and has no transitive dependencies (non-key attributes must not depend on other non-key attributes)",
+        "3NF requires all attributes to be non-nullable",
+        "3NF stores data in JSON columnar format"
+      ],
+      "answer_index": 1,
+      "explanation": "2NF eliminates partial dependencies; 3NF further eliminates transitive dependencies (every non-key attribute must depend directly on the primary key, the whole key, and nothing but the key)."
+    },
+    {
+      "id": "Q-DB-06",
+      "category": "DBMS",
+      "question": "What is the purpose of Write-Ahead Logging (WAL) in modern database engines like PostgreSQL and SQLite?",
+      "options": [
+        "To log client IP addresses before executing queries for security auditing",
+        "To record data modifications to durable disk storage before changes are written to actual data pages, ensuring crash recovery (durability)",
+        "To write queries ahead of time to compile them into native machine code",
+        "To automatically replicate queries to read-replicas asynchronously"
+      ],
+      "answer_index": 1,
+      "explanation": "WAL guarantees durability by ensuring changes are recorded sequentially on durable media before actual in-memory buffer pages are flushed to table files."
+    },
+    {
+      "id": "Q-TECH-01",
+      "category": "Other Technical Skills",
+      "question": "In system design, what does the CAP Theorem state about distributed data stores?",
+      "options": [
+        "A system can simultaneously guarantee Consistency, Availability, and Partition Tolerance under network splits",
+        "In the event of a network partition, a distributed system must trade off between Consistency and Availability",
+        "Capacity, Accuracy, and Performance cannot all exceed 99.9%",
+        "Cloud systems must always prioritize Performance over Consistency"
+      ],
+      "answer_index": 1,
+      "explanation": "The CAP theorem proves that in the presence of a network partition (P), a distributed system must choose between Consistency (C) and Availability (A)."
+    },
+    {
+      "id": "Q-TECH-02",
+      "category": "Other Technical Skills",
+      "question": "What is the primary role of a Reverse Proxy (such as Nginx, Envoy, or Traefik)?",
+      "options": [
+        "To proxy outbound requests from internal clients to the external internet",
+        "To sit in front of backend servers, handling client requests, TLS termination, load balancing, and caching",
+        "To replace relational databases with in-memory key-value stores",
+        "To compile frontend code on the fly"
+      ],
+      "answer_index": 1,
+      "explanation": "A reverse proxy accepts incoming client traffic, terminates SSL/TLS, balances load across backend services, and can provide caching and security filtering."
+    },
+    {
+      "id": "Q-TECH-03",
+      "category": "Other Technical Skills",
+      "question": "In Docker containerization, what is the architectural benefit of multi-stage builds?",
+      "options": [
+        "They run multiple containers simultaneously within a single pod",
+        "They separate the build environment (compilers, build tools) from the final minimal runtime image, reducing image size and attack surface",
+        "They automatically publish containers to multiple cloud registries",
+        "They convert Docker containers into virtual machines"
+      ],
+      "answer_index": 1,
+      "explanation": "Multi-stage builds allow using heavy build images with SDKs and compilers while copying only final binaries/artifacts into a lean production scratch/alpine image."
+    },
+    {
+      "id": "Q-TECH-04",
+      "category": "Other Technical Skills",
+      "question": "What is the Circuit Breaker pattern used for in microservices architectures?",
+      "options": [
+        "To shut down electric power to data centers during temperature spikes",
+        "To prevent cascading service failures by failing fast when a downstream dependency is unhealthy, and allowing gradual recovery testing",
+        "To enforce strict password rotation policies every 90 days",
+        "To compress network packets over TCP sockets"
+      ],
+      "answer_index": 1,
+      "explanation": "The Circuit Breaker pattern monitors failing remote calls; when failures cross a threshold, the breaker trips to fail fast, shielding the downstream service and preventing caller thread pool exhaustion."
+    },
+    {
+      "id": "Q-COMM-01",
+      "category": "Communication",
+      "question": "When a critical production incident occurs and impacts clients, what is the best immediate communication strategy?",
+      "options": [
+        "Wait until the entire fix is deployed and verified before notifying anyone to avoid panic",
+        "Immediately issue a concise, transparent status acknowledging the incident, stating current investigation efforts, expected update cadence, and customer impact",
+        "Send an internal email blaming the engineer who submitted the last commit",
+        "Downplay the incident severity on public status pages"
+      ],
+      "answer_index": 1,
+      "explanation": "Incident communication best practice is swift acknowledgement, clear impact statement, avoiding speculation, and committing to regular update cadences."
+    },
+    {
+      "id": "Q-COMM-02",
+      "category": "Communication",
+      "question": "During a technical design review, a junior engineer strongly challenges your architectural proposal. How should an engineering leader respond?",
+      "options": [
+        "Dismiss their critique immediately citing your higher seniority and experience",
+        "Listen actively, ask clarifying questions to understand their perspective, evaluate the trade-offs objectively, and explain the reasoning behind decisions",
+        "Escalate the matter to their HR manager for insubordination",
+        "Accept their proposal entirely without evaluating technical merits"
+      ],
+      "answer_index": 1,
+      "explanation": "Healthy engineering culture thrives on psychological safety, objective technical evaluation, active listening, and evidence-based decision making."
+    },
+    {
+      "id": "Q-COMM-03",
+      "category": "Communication",
+      "question": "What is the core principle of an 'Actionable Code Review' comment?",
+      "options": [
+        "Stating 'This code is terrible, rewrite it'",
+        "Highlighting the specific concern, explaining 'why' it matters (performance, bug, maintainability), and suggesting a concrete alternative or reference",
+        "Approving without reviewing to avoid hurting feelings",
+        "Rewriting the code yourself without notifying the author"
+      ],
+      "answer_index": 1,
+      "explanation": "Actionable feedback identifies the issue, articulates the rationale, and suggests a viable path forward with constructive empathy."
+    },
+    {
+      "id": "Q-COMM-04",
+      "category": "Communication",
+      "question": "In a cross-functional project with non-technical stakeholders (Marketing, Sales), how should technical trade-offs be communicated?",
+      "options": [
+        "Use dense jargon like memory pointer arithmetic and B-tree depths to establish authority",
+        "Frame trade-offs in terms of business impact: customer experience, delivery timeline, risk, budget, and scalability",
+        "Refuse to discuss technical decisions with non-engineers",
+        "Promise all features can be delivered in half the time without trade-offs"
+      ],
+      "answer_index": 1,
+      "explanation": "Effective cross-functional communication translates technical mechanics into business outcomes, risks, trade-offs, and customer value."
+    },
+    {
+      "id": "Q-APT-01",
+      "category": "Aptitude",
+      "question": "If 6 software developers can complete 12 microservice integrations in 8 days, how many days will it take 4 developers to complete 18 microservice integrations at the same work rate?",
+      "options": [
+        "12 days",
+        "16 days",
+        "18 days",
+        "20 days"
+      ],
+      "answer_index": 2,
+      "explanation": "Work rate: 12 integrations / (6 dev * 8 days) = 12 / 48 = 0.25 integrations/dev-day. For 4 developers doing 18 integrations: Days = 18 / (4 * 0.25) = 18 / 1 = 18 days."
+    },
+    {
+      "id": "Q-APT-02",
+      "category": "Aptitude",
+      "question": "Find the next number in the sequence: 3, 7, 15, 31, 63, ___?",
+      "options": [
+        "125",
+        "127",
+        "129",
+        "131"
+      ],
+      "answer_index": 1,
+      "explanation": "Pattern is x_n = 2 * x_{n-1} + 1 (or 2^(n+1) - 1). 63 * 2 + 1 = 127."
+    },
+    {
+      "id": "Q-APT-03",
+      "category": "Aptitude",
+      "question": "A server rack runs at 80% capacity during peak hours and 30% capacity during off-peak hours. If off-peak lasts 14 hours and peak lasts 10 hours a day, what is the weighted average daily server utilization?",
+      "options": [
+        "50.8%",
+        "55.0%",
+        "52.5%",
+        "58.3%"
+      ],
+      "answer_index": 0,
+      "explanation": "Total load = (10 * 80) + (14 * 30) = 800 + 420 = 1220. Average = 1220 / 24 = 50.83%."
+    },
+    {
+      "id": "Q-APT-04",
+      "category": "Aptitude",
+      "question": "Statement 1: All high-availability clusters use replication. Statement 2: Some cloud systems are high-availability clusters. Conclusion: Some cloud systems use replication.",
+      "options": [
+        "Conclusion is definitely TRUE",
+        "Conclusion is definitely FALSE",
+        "Conclusion is uncertain / cannot be determined",
+        "Statement 1 contradicts Statement 2"
+      ],
+      "answer_index": 0,
+      "explanation": "Since some cloud systems belong to high-availability clusters, and all high-availability clusters use replication, those cloud systems must necessarily use replication."
+    },
+    {
+      "id": "Q-APT-05",
+      "category": "Aptitude",
+      "question": "If an algorithm's execution time quadruples when the input size doubles, what is its asymptotic time complexity?",
+      "options": [
+        "O(n)",
+        "O(n log n)",
+        "O(n\u00b2)",
+        "O(2\u207f)"
+      ],
+      "answer_index": 2,
+      "explanation": "If f(2n) = 4 * f(n), then f(n) proportional to n\u00b2 (since (2n)\u00b2 = 4n\u00b2), which is quadratic time O(n\u00b2)."
+    }
+  ],
+  "assessments": [],
+  "appointments": []
+}

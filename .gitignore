@@ -1,0 +1,14 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Browser temporary profile
+.edge_temp/
+
+# Environment secrets
+.env
+
+# OS metadata
+.DS_Store
+Thumbs.db

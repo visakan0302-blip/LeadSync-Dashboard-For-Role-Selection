@@ -1,0 +1,3333 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadSync - AI Talent Assessment &amp; Leadership Succession Planning</title>
+  <meta name="description" content="Enterprise talent management platform featuring HR assessment creation across Python, C, Java, DBMS, manager analytics, and role suitability analysis for 5 core leadership succession roles.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Chart.js for Interactive Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar" role="banner">
+      <div class="brand-section">
+        <div class="brand-logo-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-title">
+          LeadSync
+          <span class="brand-badge">Succession 2.0</span>
+        </div>
+      </div>
+
+      <!-- Role Switcher -->
+      <div class="role-switch-container" role="region" aria-label="Role Switcher">
+        <span class="role-switch-label">Role:</span>
+        <button id="btn-role-hr" class="role-pill-btn active" data-role="hr" aria-label="Switch to HR Administrator">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          HR Admin
+        </button>
+        <button id="btn-role-manager" class="role-pill-btn" data-role="manager" aria-label="Switch to Engineering Manager">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Manager
+        </button>
+        <button id="btn-role-employee" class="role-pill-btn" data-role="employee" aria-label="Switch to Employee View">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 1 0-16 0"></path></svg>
+          Employee
+        </button>
+      </div>
+
+      <!-- Employee Selector (only visible in Employee role) -->
+      <div id="emp-selector-wrapper" style="display: none; align-items: center; gap: 8px;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Active User:</span>
+        <select id="select-active-employee" class="form-select" style="padding: 4px 10px; font-size: 0.82rem;"><option value="EMP-001">Alex Rivera (Jr. Software Engineer)</option><option value="EMP-002">Priya Sharma (Frontend Engineer)</option><option value="EMP-003">Marcus Chen (Backend Developer)</option><option value="EMP-004">Sarah Jenkins (Full Stack Engineer)</option><option value="EMP-005">David Kim (Systems Analyst)</option><option value="EMP-006">Elena Rostova (Junior AI Developer)</option><option value="EMP-007">James Wilson (Cloud &amp; Infrastructure Associate)</option><option value="EMP-008">Ananya Patel (Data Analyst)</option><option value="EMP-009">Carlos Gomez (Database Support Engineer)</option><option value="EMP-010">Rachel Green (QA &amp; Automation Engineer)</option><option value="EMP-011">Michael Chang (DevOps Technician)</option><option value="EMP-012">Sofia Al-Mansoor (Junior Project Coordinator)</option><option value="EMP-013">Liam O'Connor (Software Engineer (Embedded &amp; C))</option><option value="EMP-014">Maya Lin (Java Developer)</option><option value="EMP-015">Vikram Malhotra (Associate Solutions Architect)</option></select>
+      </div>
+
+      <!-- Right Profile Pill & Quick Actions -->
+      <div class="nav-center-actions">
+        <button id="btn-quick-ai-match" class="btn btn-primary btn-sm" title="Find Best Employee for Role with AI" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>AI Match</span>
+        </button>
+        <button id="btn-quick-new-asm" class="btn btn-secondary btn-sm" title="Schedule Assessment">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+          <span>Schedule</span>
+        </button>
+        <button id="btn-quick-add-emp" class="btn btn-secondary btn-sm" title="Add New Employee">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          <span>Add Emp</span>
+        </button>
+        <div class="user-profile-pill">
+          <div id="current-user-avatar" class="user-avatar-sm">CO</div>
+          <div class="user-info-text">
+            <span id="current-user-name" class="user-name-text">Clara Oswald</span>
+            <span id="current-user-role" class="user-role-text">HR Director</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <!-- Sidebar Navigation -->
+      <aside class="app-sidebar" role="navigation" aria-label="Main Navigation">
+        <div>
+          <div class="nav-group-title">Dashboards</div>
+          <ul class="nav-links">
+            <li id="nav-item-hr">
+              <button class="nav-link-btn active" data-tab="tab-hr" id="link-tab-hr">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>HR Dashboard</span>
+                <span class="badge-tag badge-hr">Top 3</span>
+              </button>
+            </li>
+            <li id="nav-item-manager">
+              <button class="nav-link-btn" data-tab="tab-manager" id="link-tab-manager">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                <span>Manager Dashboard</span>
+                <span class="badge-tag badge-mgr">All 15</span>
+              </button>
+            </li>
+            <li id="nav-item-employee">
+              <button class="nav-link-btn" data-tab="tab-employee" id="link-tab-employee">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 1 0-16 0"></path></svg>
+                <span>My Profile &amp; Tests</span>
+                <span class="badge-tag badge-emp">Self</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="nav-group-title">Succession Planning</div>
+          <ul class="nav-links">
+            <li>
+              <button class="nav-link-btn" data-tab="tab-ai-matcher" id="link-tab-ai-matcher">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span>AI Role Matcher</span>
+                <span class="badge-tag" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; font-weight: 700;">AI Match</span>
+              </button>
+            </li>
+            <li>
+              <button class="nav-link-btn" data-tab="tab-suitability" id="link-tab-suitability">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span>Suitability Analysis</span>
+              </button>
+            </li>
+            <li>
+              <button class="nav-link-btn" data-tab="tab-succession" id="link-tab-succession">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span>Succession Roles</span>
+                <span class="badge-tag" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe;">5 Roles</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div style="margin-top: auto;">
+          <button id="btn-reset-seeds" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; font-size: 0.75rem;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path></svg>
+            Reset Seed Data
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Viewport -->
+      <main class="main-viewport" role="main">
+        <!-- ========================================== -->
+        <!-- TAB 1: HR DASHBOARD -->
+        <!-- ========================================== -->
+        <section id="tab-hr" class="tab-pane active" aria-labelledby="link-tab-hr">
+          <div class="view-header">
+            <div class="header-left">
+              <h1 class="view-title">HR Talent &amp; Assessment Command</h1>
+              <p class="view-subtitle">Manage skill assessments across Python, C, Java, DBMS, and monitor Top 3 high-performing candidates.</p>
+            </div>
+            <div class="header-actions">
+              <button id="btn-hr-create-asm" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                Create Assessment
+              </button>
+              <button id="btn-hr-add-emp" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                Add Employee
+              </button>
+            </div>
+          </div>
+
+          <!-- HR Stats Overview -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon indigo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <div class="stat-info">
+                <span id="stat-total-emps" class="stat-value">15</span>
+                <span class="stat-label">Total Employees Enrolled</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon cyan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="stat-info">
+                <span id="stat-active-asms" class="stat-value">2</span>
+                <span class="stat-label">Active 20-Q Assessments</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon emerald">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+              </div>
+              <div class="stat-info">
+                <span id="stat-top-score" class="stat-value">95%</span>
+                <span class="stat-label">Highest Assessment Score</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon amber">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <div class="stat-info">
+                <span id="stat-ready-now" class="stat-value">6</span>
+                <span class="stat-label">Leadership Ready Now</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================== -->
+          <!-- HR AI CANDIDATE ROLE & ELIGIBILITY ANALYZER -->
+          <!-- ========================================== -->
+          <div id="hr-ai-analyzer-module" class="glass-card hr-ai-analyzer-card" style="margin-bottom: 28px; border: 1.5px solid #c7d2fe; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.12); padding: 26px;">
+            <!-- Header -->
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 22px;">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: linear-gradient(135deg, #4f46e5, #7c3aed, #ec4899); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="badge-tag" style="background: linear-gradient(135deg, #4338ca, #6366f1); color: white; font-weight: 700; border: none;">LeadSync AI Engine 2.5</span>
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">Multi-Modal Succession Intelligence</span>
+                  </div>
+                  <h2 style="font-size: 1.35rem; color: #1e1b4b; font-weight: 800; margin-top: 4px;">
+                    AI Candidate Role Suitability &amp; Eligibility Analyzer
+                  </h2>
+                  <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 2px;">
+                    Accurately evaluates target role benchmarks, live 20-question assessment marks, IT skills, verified certificate images, and candidate resume to determine role eligibility and crown the best employee.
+                  </p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" id="btn-hr-ai-reset-defaults" class="btn btn-secondary btn-sm" onclick="resetHRAIAnalyzerDefaults()">
+                  ↺ Reset Defaults
+                </button>
+              </div>
+            </div>
+
+            <!-- Configuration Grid (Steps 1 to 5) -->
+            <div class="hr-ai-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              
+              <!-- LEFT COLUMN: Step 1 Role Selection + Step 2 Candidate & Assessment Marks -->
+              <div style="display: flex; flex-direction: column; gap: 18px;">
+                
+                <!-- STEP 1: TARGET ROLE SELECTION -->
+                <div class="glass-card" style="padding: 18px; border: 1px solid #e2e8f0; background: #ffffff;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <label class="form-label" for="hr-ai-target-role" style="font-weight: 700; font-size: 0.92rem; color: #1e1b4b; margin-bottom: 0;">
+                      <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background: #4f46e5; color: white; font-size: 0.75rem; margin-right: 6px;">1</span>
+                      Target Leadership Role:
+                    </label>
+                    <span id="hr-ai-role-exp-badge" class="badge-tag" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.74rem;">Min Exp: 4+ Yrs</span>
+                  </div>
+                  
+                  <select id="hr-ai-target-role" class="form-select" style="font-weight: 600;" onchange="handleHRAITargetRoleChange()">
+                    <option value="ROLE-SSE" selected="">Senior Software Engineer (Core Engineering)</option>
+                    <option value="ROLE-AIML">AI/ML Engineer (AI &amp; Advanced Analytics)</option>
+                    <option value="ROLE-DEVOPS">DevOps Engineer (Cloud Infrastructure)</option>
+                    <option value="ROLE-DBA">Database Administrator / DBA (Data Systems)</option>
+                    <option value="ROLE-PM">Project Team Leader / PM (Agile Delivery)</option>
+                    <option value="CUSTOM">+ Custom Technical Leadership Role...</option>
+                  </select>
+
+                  <!-- Custom Role Inline Inputs (Visible when Custom is chosen) -->
+                  <div id="hr-ai-custom-role-inputs" style="display: none; margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                      <div>
+                        <label class="form-label" style="font-size: 0.75rem;">Custom Role Title:</label>
+                        <input type="text" id="hr-ai-custom-role-title" class="form-input" placeholder="e.g. Lead Platform Architect" value="Lead Platform &amp; Distributed Systems Architect">
+                      </div>
+                      <div>
+                        <label class="form-label" style="font-size: 0.75rem;">Min Exp (Yrs):</label>
+                        <input type="number" id="hr-ai-custom-role-exp" class="form-input" min="1" max="15" step="0.5" value="4.0">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Live Target Role Benchmarks Preview -->
+                  <div id="hr-ai-role-benchmarks-box" style="margin-top: 10px; font-size: 0.78rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #f1f5f9;">
+      <div style="font-weight: 700; color: #1e1b4b; margin-bottom: 2px;">
+        Senior Software Engineer • Department: Core Engineering
+      </div>
+      <div style="margin-bottom: 4px; color: #64748b;">Leads system design, core codebase architecture, code reviews, and mentors mid &amp; junior developers across full-stack and backend systems.</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">Python: 85%</span>
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">Java: 85%</span>
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">C: 75%</span>
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">DBMS: 85%</span>
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">Architecture: 88%</span>
+        
+          <span class="badge-tag" style="background: #e0e7ff; color: #4338ca; font-size: 0.72rem; padding: 2px 6px;">Cloud/DevOps: 78%</span>
+        
+      </div>
+    </div>
+                </div>
+
+                <!-- STEP 2: CANDIDATE SELECTION & LIVE ASSESSMENT MARKS -->
+                <div class="glass-card" style="padding: 18px; border: 1px solid #e2e8f0; background: #ffffff;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <label class="form-label" for="hr-ai-select-employee" style="font-weight: 700; font-size: 0.92rem; color: #1e1b4b; margin-bottom: 0;">
+                      <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background: #4f46e5; color: white; font-size: 0.75rem; margin-right: 6px;">2</span>
+                      Select Candidate for Evaluation:
+                    </label>
+                    <span id="hr-ai-emp-dept-badge" class="badge-tag badge-mgr" style="font-size: 0.74rem;">Engineering • 2.5 Yrs Exp</span>
+                  </div>
+
+                  <select id="hr-ai-select-employee" class="form-select" style="font-weight: 600;" onchange="handleHRAIEmployeeChange()">
+      <option value="EMP-001" selected="">
+        EMP-001 - Alex Rivera (Jr. Software Engineer • Engineering)
+      </option>
+    
+      <option value="EMP-002">
+        EMP-002 - Priya Sharma (Frontend Engineer • Engineering)
+      </option>
+    
+      <option value="EMP-003">
+        EMP-003 - Marcus Chen (Backend Developer • Engineering)
+      </option>
+    
+      <option value="EMP-004">
+        EMP-004 - Sarah Jenkins (Full Stack Engineer • Product Engineering)
+      </option>
+    
+      <option value="EMP-005">
+        EMP-005 - David Kim (Systems Analyst • Infrastructure)
+      </option>
+    
+      <option value="EMP-006">
+        EMP-006 - Elena Rostova (Junior AI Developer • AI &amp; Research)
+      </option>
+    
+      <option value="EMP-007">
+        EMP-007 - James Wilson (Cloud &amp; Infrastructure Associate • DevOps)
+      </option>
+    
+      <option value="EMP-008">
+        EMP-008 - Ananya Patel (Data Analyst • Data &amp; Analytics)
+      </option>
+    
+      <option value="EMP-009">
+        EMP-009 - Carlos Gomez (Database Support Engineer • Infrastructure)
+      </option>
+    
+      <option value="EMP-010">
+        EMP-010 - Rachel Green (QA &amp; Automation Engineer • Quality Engineering)
+      </option>
+    
+      <option value="EMP-011">
+        EMP-011 - Michael Chang (DevOps Technician • DevOps)
+      </option>
+    
+      <option value="EMP-012">
+        EMP-012 - Sofia Al-Mansoor (Junior Project Coordinator • Project Management)
+      </option>
+    
+      <option value="EMP-013">
+        EMP-013 - Liam O'Connor (Software Engineer (Embedded &amp; C) • Core Systems)
+      </option>
+    
+      <option value="EMP-014">
+        EMP-014 - Maya Lin (Java Developer • Enterprise Applications)
+      </option>
+    
+      <option value="EMP-015">
+        EMP-015 - Vikram Malhotra (Associate Solutions Architect • Architecture)
+      </option>
+    </select>
+
+                  <!-- OFFICIAL ASSESSMENT MARKS CARD -->
+                  <div style="margin-top: 14px; border-radius: 8px; border: 1px solid #c7d2fe; background: linear-gradient(135deg, #f8faff, #f5f3ff); padding: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.1rem;">📝</span>
+                        <strong style="font-size: 0.88rem; color: #1e1b4b;">Official Assessment Marks (20 Questions)</strong>
+                      </div>
+                      <div id="hr-ai-asm-overall-badge" style="font-size: 0.88rem; font-weight: 800; color: #4338ca; background: #e0e7ff; padding: 2px 10px; border-radius: 12px;">Score: 75% (15/20)</div>
+                    </div>
+                    
+                    <p style="font-size: 0.77rem; color: #64748b; margin-bottom: 10px;">
+                      Verified candidate exam score covering Python, Java, C, DBMS, System Architecture, Communication, and Aptitude.
+                    </p>
+
+                    <!-- Category Breakdown Meters -->
+                    <div id="hr-ai-assessment-breakdown-bars" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.76rem;">
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">Python:</span>
+        <strong style="color: #4f46e5;">67%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 67%; height: 100%; background: #4f46e5; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">Java:</span>
+        <strong style="color: #0284c7;">100%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 100%; height: 100%; background: #0284c7; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">C / Systems:</span>
+        <strong style="color: #0891b2;">67%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 67%; height: 100%; background: #0891b2; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">DBMS / SQL:</span>
+        <strong style="color: #16a34a;">67%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 67%; height: 100%; background: #16a34a; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">Other Tech:</span>
+        <strong style="color: #8b5cf6;">75%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 75%; height: 100%; background: #8b5cf6; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">Communication:</span>
+        <strong style="color: #d97706;">100%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 100%; height: 100%; background: #d97706; border-radius: 3px;"></div>
+      </div>
+    </div>
+  
+    <div style="background: #ffffff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; color: #334155;">Aptitude:</span>
+        <strong style="color: #ec4899;">75%</strong>
+      </div>
+      <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div style="width: 75%; height: 100%; background: #ec4899; border-radius: 3px;"></div>
+      </div>
+    </div>
+  </div>
+
+                    <!-- Editable Marks Simulation Toggle -->
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between;">
+                      <label style="font-size: 0.76rem; color: #475569; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="chk-simulate-marks" onchange="toggleMarksSimulation(this.checked)">
+                        <span>Simulate / Adjust Marks for What-If Analysis</span>
+                      </label>
+                      <div id="marks-simulation-ctrls" style="display: none; align-items: center; gap: 6px;">
+                        <input type="number" id="sim-overall-score" min="0" max="100" class="form-input" style="width: 70px; padding: 2px 6px; font-size: 0.8rem;" value="95">
+                        <span style="font-size: 0.76rem;">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- RIGHT COLUMN: Step 3 IT Skills + Step 4 Certifications + Step 5 Resume -->
+              <div style="display: flex; flex-direction: column; gap: 18px;">
+                
+                <!-- STEP 3: COMPREHENSIVE COMPUTER & IT SKILLS SELECTION -->
+                <div class="glass-card" style="padding: 18px; border: 1px solid #e2e8f0; background: #ffffff;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.92rem; color: #1e1b4b; margin-bottom: 0;">
+                      <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background: #4f46e5; color: white; font-size: 0.75rem; margin-right: 6px;">3</span>
+                      Computer &amp; IT-Related Skills Known:
+                    </label>
+                    <span id="hr-ai-skills-count-badge" class="badge-tag" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.74rem;">16 Skills Selected</span>
+                  </div>
+
+                  <!-- Real-time Skill Search Bar -->
+                  <div style="position: relative; margin-bottom: 8px;">
+                    <input type="text" id="hr-ai-skills-search" class="form-input" placeholder="🔍 Search 80+ IT skills: Python, React, Kubernetes, Kafka, PyTorch, Docker, Oracle..." style="font-size: 0.82rem; padding-left: 10px;" oninput="filterITSkillsList(this.value)">
+                  </div>
+
+                  <!-- Category Filter Tabs -->
+                  <div id="hr-ai-skills-category-tabs" class="skills-category-pills" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px;">
+    <button type="button" class="skill-cat-pill active" onclick="setITSkillsCategory('All')">
+      All
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Languages')">
+      Languages
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Frontend &amp; Web')">
+      Frontend &amp; Web
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Backend &amp; Frameworks')">
+      Backend &amp; Frameworks
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Cloud &amp; DevOps')">
+      Cloud &amp; DevOps
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Databases &amp; Big Data')">
+      Databases &amp; Big Data
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('AI &amp; Data Science')">
+      AI &amp; Data Science
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Cybersecurity &amp; Networks')">
+      Cybersecurity &amp; Networks
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Systems &amp; Architecture')">
+      Systems &amp; Architecture
+    </button>
+  
+    <button type="button" class="skill-cat-pill " onclick="setITSkillsCategory('Leadership &amp; Practices')">
+      Leadership &amp; Practices
+    </button>
+  </div>
+
+                  <!-- Interactive Skills Cloud -->
+                  <div id="hr-ai-skills-cloud" class="it-skills-cloud-box" style="max-height: 140px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; background: #f8fafc;">
+      <div class="it-skill-chip active" onclick="toggleITSkill('Python')">
+        <span class="chip-check">✓</span>
+        <span>Python</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('Java')">
+        <span class="chip-check">✓</span>
+        <span>Java</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('C')">
+        <span class="chip-check">✓</span>
+        <span>C</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('C++')">
+        <span class="chip-check">✓</span>
+        <span>C++</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('C#')">
+        <span class="chip-check">✓</span>
+        <span>C#</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('JavaScript')">
+        <span class="chip-check">✓</span>
+        <span>JavaScript</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('TypeScript')">
+        <span class="chip-check">✓</span>
+        <span>TypeScript</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Go')">
+        <span class="chip-check">✓</span>
+        <span>Go</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Rust')">
+        <span class="chip-check">✓</span>
+        <span>Rust</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('PHP')">
+        <span class="chip-check">✓</span>
+        <span>PHP</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Ruby')">
+        <span class="chip-check">✓</span>
+        <span>Ruby</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Swift')">
+        <span class="chip-check">✓</span>
+        <span>Swift</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Kotlin')">
+        <span class="chip-check">✓</span>
+        <span>Kotlin</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SQL')">
+        <span class="chip-check">✓</span>
+        <span>SQL</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Bash/Shell')">
+        <span class="chip-check">✓</span>
+        <span>Bash/Shell</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('R')">
+        <span class="chip-check">✓</span>
+        <span>R</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Scala')">
+        <span class="chip-check">✓</span>
+        <span>Scala</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Dart')">
+        <span class="chip-check">✓</span>
+        <span>Dart</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Perl')">
+        <span class="chip-check">✓</span>
+        <span>Perl</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Assembly')">
+        <span class="chip-check">✓</span>
+        <span>Assembly</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Lua')">
+        <span class="chip-check">✓</span>
+        <span>Lua</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('React')">
+        <span class="chip-check">✓</span>
+        <span>React</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Next.js')">
+        <span class="chip-check">✓</span>
+        <span>Next.js</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Vue.js')">
+        <span class="chip-check">✓</span>
+        <span>Vue.js</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Angular')">
+        <span class="chip-check">✓</span>
+        <span>Angular</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('Node.js')">
+        <span class="chip-check">✓</span>
+        <span>Node.js</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('HTML5')">
+        <span class="chip-check">✓</span>
+        <span>HTML5</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('CSS3')">
+        <span class="chip-check">✓</span>
+        <span>CSS3</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Tailwind CSS')">
+        <span class="chip-check">✓</span>
+        <span>Tailwind CSS</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SASS/SCSS')">
+        <span class="chip-check">✓</span>
+        <span>SASS/SCSS</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Redux')">
+        <span class="chip-check">✓</span>
+        <span>Redux</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Svelte')">
+        <span class="chip-check">✓</span>
+        <span>Svelte</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Vite')">
+        <span class="chip-check">✓</span>
+        <span>Vite</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Webpack')">
+        <span class="chip-check">✓</span>
+        <span>Webpack</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('REST APIs')">
+        <span class="chip-check">✓</span>
+        <span>REST APIs</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('GraphQL')">
+        <span class="chip-check">✓</span>
+        <span>GraphQL</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('WebSockets')">
+        <span class="chip-check">✓</span>
+        <span>WebSockets</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('FastAPI')">
+        <span class="chip-check">✓</span>
+        <span>FastAPI</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Django')">
+        <span class="chip-check">✓</span>
+        <span>Django</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Flask')">
+        <span class="chip-check">✓</span>
+        <span>Flask</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Spring Boot')">
+        <span class="chip-check">✓</span>
+        <span>Spring Boot</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('ASP.NET Core')">
+        <span class="chip-check">✓</span>
+        <span>ASP.NET Core</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Express.js')">
+        <span class="chip-check">✓</span>
+        <span>Express.js</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('NestJS')">
+        <span class="chip-check">✓</span>
+        <span>NestJS</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Ruby on Rails')">
+        <span class="chip-check">✓</span>
+        <span>Ruby on Rails</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Laravel')">
+        <span class="chip-check">✓</span>
+        <span>Laravel</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Microservices')">
+        <span class="chip-check">✓</span>
+        <span>Microservices</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('gRPC')">
+        <span class="chip-check">✓</span>
+        <span>gRPC</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Apache Kafka')">
+        <span class="chip-check">✓</span>
+        <span>Apache Kafka</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('RabbitMQ')">
+        <span class="chip-check">✓</span>
+        <span>RabbitMQ</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Celery')">
+        <span class="chip-check">✓</span>
+        <span>Celery</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Event-Driven Architecture')">
+        <span class="chip-check">✓</span>
+        <span>Event-Driven Architecture</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('AWS')">
+        <span class="chip-check">✓</span>
+        <span>AWS</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Microsoft Azure')">
+        <span class="chip-check">✓</span>
+        <span>Microsoft Azure</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Google Cloud (GCP)')">
+        <span class="chip-check">✓</span>
+        <span>Google Cloud (GCP)</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('Docker')">
+        <span class="chip-check">✓</span>
+        <span>Docker</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Kubernetes')">
+        <span class="chip-check">✓</span>
+        <span>Kubernetes</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Terraform')">
+        <span class="chip-check">✓</span>
+        <span>Terraform</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Ansible')">
+        <span class="chip-check">✓</span>
+        <span>Ansible</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('CI/CD Pipelines')">
+        <span class="chip-check">✓</span>
+        <span>CI/CD Pipelines</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('GitHub Actions')">
+        <span class="chip-check">✓</span>
+        <span>GitHub Actions</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Jenkins')">
+        <span class="chip-check">✓</span>
+        <span>Jenkins</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Linux Admin')">
+        <span class="chip-check">✓</span>
+        <span>Linux Admin</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Helm')">
+        <span class="chip-check">✓</span>
+        <span>Helm</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Prometheus')">
+        <span class="chip-check">✓</span>
+        <span>Prometheus</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Grafana')">
+        <span class="chip-check">✓</span>
+        <span>Grafana</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Nginx')">
+        <span class="chip-check">✓</span>
+        <span>Nginx</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SRE')">
+        <span class="chip-check">✓</span>
+        <span>SRE</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('PostgreSQL')">
+        <span class="chip-check">✓</span>
+        <span>PostgreSQL</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('MySQL')">
+        <span class="chip-check">✓</span>
+        <span>MySQL</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('MongoDB')">
+        <span class="chip-check">✓</span>
+        <span>MongoDB</span>
+      </div>
+    
+      <div class="it-skill-chip active" onclick="toggleITSkill('Redis')">
+        <span class="chip-check">✓</span>
+        <span>Redis</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Oracle Database')">
+        <span class="chip-check">✓</span>
+        <span>Oracle Database</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SQL Server')">
+        <span class="chip-check">✓</span>
+        <span>SQL Server</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Cassandra')">
+        <span class="chip-check">✓</span>
+        <span>Cassandra</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Elasticsearch')">
+        <span class="chip-check">✓</span>
+        <span>Elasticsearch</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('DynamoDB')">
+        <span class="chip-check">✓</span>
+        <span>DynamoDB</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Neo4j')">
+        <span class="chip-check">✓</span>
+        <span>Neo4j</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Apache Spark')">
+        <span class="chip-check">✓</span>
+        <span>Apache Spark</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Apache Hadoop')">
+        <span class="chip-check">✓</span>
+        <span>Apache Hadoop</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Snowflake')">
+        <span class="chip-check">✓</span>
+        <span>Snowflake</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Databricks')">
+        <span class="chip-check">✓</span>
+        <span>Databricks</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('ETL Pipelines')">
+        <span class="chip-check">✓</span>
+        <span>ETL Pipelines</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Machine Learning')">
+        <span class="chip-check">✓</span>
+        <span>Machine Learning</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Deep Learning')">
+        <span class="chip-check">✓</span>
+        <span>Deep Learning</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('PyTorch')">
+        <span class="chip-check">✓</span>
+        <span>PyTorch</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('TensorFlow')">
+        <span class="chip-check">✓</span>
+        <span>TensorFlow</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Scikit-learn')">
+        <span class="chip-check">✓</span>
+        <span>Scikit-learn</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Pandas')">
+        <span class="chip-check">✓</span>
+        <span>Pandas</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('NumPy')">
+        <span class="chip-check">✓</span>
+        <span>NumPy</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('NLP')">
+        <span class="chip-check">✓</span>
+        <span>NLP</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Computer Vision')">
+        <span class="chip-check">✓</span>
+        <span>Computer Vision</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('LLMs &amp; Generative AI')">
+        <span class="chip-check">✓</span>
+        <span>LLMs &amp; Generative AI</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('RAG Systems')">
+        <span class="chip-check">✓</span>
+        <span>RAG Systems</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Hugging Face')">
+        <span class="chip-check">✓</span>
+        <span>Hugging Face</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('MLOps')">
+        <span class="chip-check">✓</span>
+        <span>MLOps</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Prompt Engineering')">
+        <span class="chip-check">✓</span>
+        <span>Prompt Engineering</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Network Security')">
+        <span class="chip-check">✓</span>
+        <span>Network Security</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Penetration Testing')">
+        <span class="chip-check">✓</span>
+        <span>Penetration Testing</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('IAM')">
+        <span class="chip-check">✓</span>
+        <span>IAM</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('OWASP Top 10')">
+        <span class="chip-check">✓</span>
+        <span>OWASP Top 10</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Cryptography')">
+        <span class="chip-check">✓</span>
+        <span>Cryptography</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Firewalls &amp; VPNs')">
+        <span class="chip-check">✓</span>
+        <span>Firewalls &amp; VPNs</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SOC Analysis')">
+        <span class="chip-check">✓</span>
+        <span>SOC Analysis</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Zero Trust Architecture')">
+        <span class="chip-check">✓</span>
+        <span>Zero Trust Architecture</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SSL/TLS')">
+        <span class="chip-check">✓</span>
+        <span>SSL/TLS</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('SIEM')">
+        <span class="chip-check">✓</span>
+        <span>SIEM</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('System Design')">
+        <span class="chip-check">✓</span>
+        <span>System Design</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Distributed Systems')">
+        <span class="chip-check">✓</span>
+        <span>Distributed Systems</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Concurrency &amp; Multithreading')">
+        <span class="chip-check">✓</span>
+        <span>Concurrency &amp; Multithreading</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Operating Systems')">
+        <span class="chip-check">✓</span>
+        <span>Operating Systems</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Embedded Systems')">
+        <span class="chip-check">✓</span>
+        <span>Embedded Systems</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('High Availability')">
+        <span class="chip-check">✓</span>
+        <span>High Availability</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Database Indexing &amp; Sharding')">
+        <span class="chip-check">✓</span>
+        <span>Database Indexing &amp; Sharding</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Agile / Scrum')">
+        <span class="chip-check">✓</span>
+        <span>Agile / Scrum</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Sprint Planning')">
+        <span class="chip-check">✓</span>
+        <span>Sprint Planning</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Jira')">
+        <span class="chip-check">✓</span>
+        <span>Jira</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Technical Leadership')">
+        <span class="chip-check">✓</span>
+        <span>Technical Leadership</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Engineering Mentorship')">
+        <span class="chip-check">✓</span>
+        <span>Engineering Mentorship</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Code Review')">
+        <span class="chip-check">✓</span>
+        <span>Code Review</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Stakeholder Management')">
+        <span class="chip-check">✓</span>
+        <span>Stakeholder Management</span>
+      </div>
+    
+      <div class="it-skill-chip " onclick="toggleITSkill('Incident Response')">
+        <span class="chip-check">✓</span>
+        <span>Incident Response</span>
+      </div>
+    </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <button type="button" class="btn btn-secondary btn-xs" style="font-size: 0.72rem; color: #4f46e5;" onclick="autoSelectRoleSkills()">
+                      ⚡ Auto-Select Role Benchmarks
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs" style="font-size: 0.72rem; color: #ef4444;" onclick="clearAllSelectedSkills()">
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+
+                <!-- STEP 4 & 5: CERTIFICATIONS IMAGE & RESUME SELECTION -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  
+                  <!-- STEP 4: CERTIFICATIONS ATTACHMENT & IMAGE UPLOAD -->
+                  <div class="glass-card" style="padding: 14px; border: 1px solid #e2e8f0; background: #ffffff;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                      <label class="form-label" style="font-weight: 700; font-size: 0.84rem; color: #1e1b4b; margin-bottom: 0;">
+                        <span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #4f46e5; color: white; font-size: 0.68rem; margin-right: 4px;">4</span>
+                        Certificate Images:
+                      </label>
+                      <span id="hr-ai-cert-count" class="badge-tag" style="font-size: 0.68rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">2 Verified</span>
+                    </div>
+
+                    <!-- Certificate Gallery Preview Container -->
+                    <div id="hr-ai-certs-gallery" style="display: flex; flex-direction: column; gap: 6px; max-height: 130px; overflow-y: auto; margin-bottom: 8px;">
+    <div class="cert-thumb-item">
+      <img src="/static/assets/certificates/EMP-001_cert_1.svg" alt="AWS Certified Cloud Practitioner" class="cert-mini-img" title="Click to view full certificate" onclick="openImageLightbox('/static/assets/certificates/EMP-001_cert_1.svg', 'AWS Certified Cloud Practitioner', 'Accredited Credential ID: CR-EMP-001-1089')">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          AWS Certified Cloud Practitioner
+        </div>
+        <div style="font-size: 0.68rem; color: #64748b;">
+          Accredited Certification Authority • <span style="color: #059669; font-weight: 600;">Verified Image</span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 0.68rem;" onclick="openImageLightbox('/static/assets/certificates/EMP-001_cert_1.svg', 'AWS Certified Cloud Practitioner', 'Accredited Credential ID: CR-EMP-001-1089')">
+        🔍
+      </button>
+    </div>
+  
+    <div class="cert-thumb-item">
+      <img src="/static/assets/certificates/EMP-001_cert_2.svg" alt="Docker Essentials Certified" class="cert-mini-img" title="Click to view full certificate" onclick="openImageLightbox('/static/assets/certificates/EMP-001_cert_2.svg', 'Docker Essentials Certified', 'Accredited Credential ID: CR-EMP-001-2178')">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          Docker Essentials Certified
+        </div>
+        <div style="font-size: 0.68rem; color: #64748b;">
+          Accredited Certification Authority • <span style="color: #059669; font-weight: 600;">Verified Image</span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 0.68rem;" onclick="openImageLightbox('/static/assets/certificates/EMP-001_cert_2.svg', 'Docker Essentials Certified', 'Accredited Credential ID: CR-EMP-001-2178')">
+        🔍
+      </button>
+    </div>
+  </div>
+
+                    <!-- Upload Certificate Image Dropzone -->
+                    <div class="upload-dropzone" onclick="document.getElementById('file-upload-cert').click()" style="border: 1.5px dashed #c7d2fe; border-radius: 6px; padding: 8px; text-align: center; cursor: pointer; background: #f5f7ff;">
+                      <input type="file" id="file-upload-cert" accept="image/*,.svg,.pdf" style="display: none;" onchange="handleCertificateUpload(event)">
+                      <div style="font-size: 0.74rem; font-weight: 700; color: #4338ca;">
+                        📁 Upload Certificate Image
+                      </div>
+                      <div style="font-size: 0.68rem; color: #64748b;">PNG, JPG, WebP, SVG</div>
+                    </div>
+                  </div>
+
+                  <!-- STEP 5: RESUME IMAGE & DOSSIER -->
+                  <div class="glass-card" style="padding: 14px; border: 1px solid #e2e8f0; background: #ffffff;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                      <label class="form-label" style="font-weight: 700; font-size: 0.84rem; color: #1e1b4b; margin-bottom: 0;">
+                        <span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: #4f46e5; color: white; font-size: 0.68rem; margin-right: 4px;">5</span>
+                        Candidate Resume:
+                      </label>
+                      <span id="hr-ai-resume-status" class="badge-tag" style="font-size: 0.68rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">Attached</span>
+                    </div>
+
+                    <!-- Resume Card Thumbnail -->
+                    <div id="hr-ai-resume-preview-box" style="margin-bottom: 8px;">
+    <div class="resume-thumb-item">
+      <img src="/static/assets/resumes/EMP-001_resume.svg" alt="Resume Thumbnail" class="resume-mini-img" title="Click to view full resume document" onclick="openImageLightbox('/static/assets/resumes/EMP-001_resume.svg', 'Alex Rivera - Official Resume Document', 'Career Dossier &amp; Verified Production Impact')">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 0.76rem; font-weight: 700; color: #1e1b4b;">
+          Alex Rivera Resume
+        </div>
+        <div style="font-size: 0.68rem; color: #64748b;">
+          Tenure: <strong>2.5 Yrs</strong> • B.S. in Computer Scien...
+        </div>
+        <div style="font-size: 0.68rem; color: #0284c7; font-weight: 600; margin-top: 2px;">
+          2 Verified Production Deliveries
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 0.68rem;" onclick="openImageLightbox('/static/assets/resumes/EMP-001_resume.svg', 'Alex Rivera - Official Resume Document', 'Career Dossier &amp; Verified Production Impact')">
+        🔍
+      </button>
+    </div>
+  </div>
+
+                    <!-- Upload Resume Image Dropzone -->
+                    <div class="upload-dropzone" onclick="document.getElementById('file-upload-resume').click()" style="border: 1.5px dashed #c7d2fe; border-radius: 6px; padding: 8px; text-align: center; cursor: pointer; background: #f5f7ff;">
+                      <input type="file" id="file-upload-resume" accept="image/*,.svg,.pdf" style="display: none;" onchange="handleResumeUpload(event)">
+                      <div style="font-size: 0.74rem; font-weight: 700; color: #4338ca;">
+                        📄 Upload Resume Image
+                      </div>
+                      <div style="font-size: 0.68rem; color: #64748b;">Attach Custom Resume Document</div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- ACTION EXECUTION BAR -->
+            <div style="margin-top: 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <button type="button" id="btn-run-hr-ai-analysis" class="btn btn-primary" style="flex: 2; min-width: 260px; padding: 14px 24px; font-size: 1rem; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #7c3aed, #ec4899); border: none; box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4); justify-content: center; letter-spacing: 0.5px; text-transform: uppercase;" onclick="executeHRAIEligibilityAnalysis()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span>⚡ Run Implemented AI Role Analysis</span>
+              </button>
+              
+              <button type="button" id="btn-compare-all-15" class="btn btn-secondary" style="flex: 1; min-width: 220px; padding: 14px 18px; font-size: 0.88rem; font-weight: 700; border: 1.5px solid #cbd5e1; justify-content: center;" onclick="executeCompanyWide15Analysis()">
+                🏆 Compare All 15 Employees for this Role
+              </button>
+            </div>
+
+            <!-- MULTI-STAGE AI REASONING PROGRESS INDICATOR -->
+            <div id="hr-ai-reasoning-progress" style="display: none; margin-top: 22px; padding: 18px; border-radius: 10px; background: linear-gradient(135deg, #f5f3ff, #eef2ff); border: 1px solid #c7d2fe;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                <div class="spinner-ring" style="width: 24px; height: 24px; border-width: 3px;"></div>
+                <div>
+                  <h4 id="hr-ai-reasoning-step-title" style="font-size: 0.95rem; color: #312e81; font-weight: 800; margin-bottom: 2px;">
+                    Implemented AI is Analyzing Candidate Evidence...
+                  </h4>
+                  <p id="hr-ai-reasoning-step-desc" style="font-size: 0.8rem; color: #4338ca; margin: 0;">
+                    Scanning 20-Question Assessment marks, verifying IT skills, and inspecting certificate credentials.
+                  </p>
+                </div>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e0e7ff; border-radius: 3px; overflow: hidden;">
+                <div id="hr-ai-progress-bar" style="width: 20%; height: 100%; background: linear-gradient(90deg, #4f46e5, #ec4899); transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- COMPREHENSIVE AI OUTPUT DISPLAY (Rendered Post-Analysis) -->
+            <!-- ======================================================== -->
+            <div id="hr-ai-analysis-output" style="display: none; margin-top: 26px;">
+              <!-- Injected by JavaScript dynamically -->
+            </div>
+
+          </div>
+
+
+          <!-- TOP THREE EMPLOYEE RESULTS (HR Dashboard Requirement) -->
+          <div class="glass-card" style="margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <div>
+                <h2 style="font-size: 1.35rem; display: flex; align-items: center; gap: 8px;">
+                  <span style="color: #d97706;">★</span> Top 3 Employee Assessment Results
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                  Per HR guidelines, only the top three highest-scoring candidates are showcased on the executive HR dashboard.
+                </p>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="navigateToTab('tab-manager')">
+                View All Employees in Manager Roster →
+              </button>
+            </div>
+
+            <!-- Podium Display -->
+            <div id="hr-top-3-container" class="podium-container">
+      <div class="podium-card rank-2">
+        <span class="crown-badge badge-silver">★ 2nd Place</span>
+        <div class="podium-avatar avatar-silver">ER</div>
+        <div class="podium-name">Elena Rostova</div>
+        <div class="podium-role">Junior AI Developer • AI &amp; Research</div>
+        
+        <div class="podium-score-pill">92%</div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 12px;">
+          18 of 20 Questions Correct
+        </div>
+
+        <div class="category-tags-wrap">
+          <span class="cat-mini-tag">Python: 100%</span><span class="cat-mini-tag">Aptitude: 98%</span><span class="cat-mini-tag">Other Tech: 88%</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px;">
+          <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openProfileModal('EMP-006')">Profile</button>
+          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="inspectEmployeeInSuitability('EMP-006')">Analyze Fit</button>
+        </div>
+      </div>
+    
+      <div class="podium-card rank-1">
+        <span class="crown-badge badge-gold">★ 1st Place</span>
+        <div class="podium-avatar avatar-gold">MC</div>
+        <div class="podium-name">Marcus Chen</div>
+        <div class="podium-role">Backend Developer • Engineering</div>
+        
+        <div class="podium-score-pill">95%</div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 12px;">
+          19 of 20 Questions Correct
+        </div>
+
+        <div class="category-tags-wrap">
+          <span class="cat-mini-tag">Java: 100%</span><span class="cat-mini-tag">DBMS: 100%</span><span class="cat-mini-tag">Other Tech: 95%</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px;">
+          <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openProfileModal('EMP-003')">Profile</button>
+          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="inspectEmployeeInSuitability('EMP-003')">Analyze Fit</button>
+        </div>
+      </div>
+    
+      <div class="podium-card rank-3">
+        <span class="crown-badge badge-bronze">★ 3rd Place</span>
+        <div class="podium-avatar avatar-bronze">SJ</div>
+        <div class="podium-name">Sarah Jenkins</div>
+        <div class="podium-role">Full Stack Engineer • Product Engineering</div>
+        
+        <div class="podium-score-pill">90%</div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 12px;">
+          18 of 20 Questions Correct
+        </div>
+
+        <div class="category-tags-wrap">
+          <span class="cat-mini-tag">Python: 95%</span><span class="cat-mini-tag">Aptitude: 92%</span><span class="cat-mini-tag">DBMS: 90%</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px;">
+          <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openProfileModal('EMP-004')">Profile</button>
+          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="inspectEmployeeInSuitability('EMP-004')">Analyze Fit</button>
+        </div>
+      </div>
+    </div>
+          </div>
+
+          <!-- HR Assessment Management & Scheduler Section -->
+          <div class="glass-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+              <div>
+                <h2 style="font-size: 1.25rem;">Scheduled Assessments</h2>
+                <p style="color: var(--text-secondary); font-size: 0.88rem;">Assessments dynamically assign 20 questions across Python, C, Java, DBMS, other tech skills, communication, and aptitude.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openCreateAssessmentModal()">
+                + New Assessment
+              </button>
+            </div>
+            <div id="hr-assessments-list">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 12px; flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow-sm);">
+      <div>
+        <div style="font-weight: 700; color: #0f172a; font-size: 0.98rem;">LeadSync 2026 Technical &amp; Leadership Readiness Assessment</div>
+        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+          Comprehensive evaluation covering Python, C, Java, DBMS, Technical Architecture, Communication, and Aptitude.
+        </div>
+        <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">
+          <span>📅 2026-10-18 at 14:00</span>
+          <span>⏱ 30 Minutes</span>
+          <span>👥 Assigned to: <strong>All 15 Employees</strong></span>
+          <span style="color: #059669; font-weight: 600;">● Active</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="switchRole('employee'); startAssessmentTest();">
+          Take as Employee →
+        </button>
+      </div>
+    </div>
+  
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 12px; flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow-sm);">
+      <div>
+        <div style="font-weight: 700; color: #0f172a; font-size: 0.98rem;">Q4 Systems Engineering &amp; DBMS Readiness</div>
+        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+          Evaluates Python, C, Java, DBMS, Technical Architecture, Communication, and Aptitude.
+        </div>
+        <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">
+          <span>📅 2026-10-22 at 15:30</span>
+          <span>⏱ 30 Minutes</span>
+          <span>👥 Assigned to: <strong>All 15 Employees</strong></span>
+          <span style="color: #059669; font-weight: 600;">● Active</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="switchRole('employee'); startAssessmentTest();">
+          Take as Employee →
+        </button>
+      </div>
+    </div>
+  </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: MANAGER DASHBOARD -->
+        <!-- ========================================== -->
+        <section id="tab-manager" class="tab-pane" style="display: none;" aria-labelledby="link-tab-manager">
+          <div class="view-header">
+            <div class="header-left">
+              <h1 class="view-title">Engineering Manager Team Performance</h1>
+              <p class="view-subtitle">Comprehensive results and skill profiles for all 15 department employees.</p>
+            </div>
+            <div class="header-actions">
+              <input type="text" id="manager-search-input" placeholder="Search by name, role, skill..." class="form-input" style="width: 260px;">
+              <select id="manager-filter-dept" class="form-select">
+                <option value="all">All Departments</option>
+                <option value="Engineering">Engineering</option>
+                <option value="DevOps">DevOps</option>
+                <option value="Infrastructure">Infrastructure</option>
+                <option value="AI &amp; Research">AI &amp; Research</option>
+                <option value="Data &amp; Analytics">Data &amp; Analytics</option>
+                <option value="Project Management">Project Management</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- All 15 Employee Results Table -->
+          <div class="table-container">
+            <table class="leadsync-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department / Role</th>
+                  <th>Experience</th>
+                  <th>Assessment Result (20 Q)</th>
+                  <th>Strongest Competency</th>
+                  <th>Succession Readiness</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="manager-employee-tbody">
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">AR</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Alex Rivera</span>
+              <span class="emp-cell-email">alex.rivera@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Jr. Software Engineer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Engineering</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">2.5 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 75%;"></div>
+            </div>
+            <span class="progress-pct-text">75%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            15 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Aptitude: 85%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-001')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-001')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">PS</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Priya Sharma</span>
+              <span class="emp-cell-email">priya.sharma@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Frontend Engineer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Engineering</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.5 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 82%;"></div>
+            </div>
+            <span class="progress-pct-text">82%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Communication: 92%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-002')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-002')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">MC</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Marcus Chen</span>
+              <span class="emp-cell-email">marcus.chen@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Backend Developer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Engineering</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">4.2 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 95%;"></div>
+            </div>
+            <span class="progress-pct-text">95%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            19 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Java: 94%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-emerald">● Ready Now</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-003')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-003')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">SJ</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Sarah Jenkins</span>
+              <span class="emp-cell-email">sarah.jenkins@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Full Stack Engineer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Product Engineering</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">4.6 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 90%;"></div>
+            </div>
+            <span class="progress-pct-text">90%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            18 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Python: 92%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-emerald">● Ready Now</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-004')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-004')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">DK</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">David Kim</span>
+              <span class="emp-cell-email">david.kim@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Systems Analyst</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Infrastructure</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">5.2 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 88%;"></div>
+            </div>
+            <span class="progress-pct-text">88%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            C: 94%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-emerald">● Ready Now</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-005')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-005')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">ER</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Elena Rostova</span>
+              <span class="emp-cell-email">elena.rostova@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Junior AI Developer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">AI &amp; Research</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">2.2 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 92%;"></div>
+            </div>
+            <span class="progress-pct-text">92%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            18 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Aptitude: 96%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-emerald">● Ready Now</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-006')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-006')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">JW</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">James Wilson</span>
+              <span class="emp-cell-email">james.wilson@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Cloud &amp; Infrastructure Associate</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">DevOps</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.2 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 84%;"></div>
+            </div>
+            <span class="progress-pct-text">84%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            16 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Cloud/DevOps: 94%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-007')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-007')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">AP</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Ananya Patel</span>
+              <span class="emp-cell-email">ananya.patel@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Data Analyst</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Data &amp; Analytics</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.8 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 86%;"></div>
+            </div>
+            <span class="progress-pct-text">86%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            DBMS: 92%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-008')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-008')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">CG</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Carlos Gomez</span>
+              <span class="emp-cell-email">carlos.gomez@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Database Support Engineer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Infrastructure</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">4.5 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 88%;"></div>
+            </div>
+            <span class="progress-pct-text">88%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            DBMS: 96%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-emerald">● Ready Now</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-009')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-009')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">RG</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Rachel Green</span>
+              <span class="emp-cell-email">rachel.green@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">QA &amp; Automation Engineer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Quality Engineering</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.6 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 82%;"></div>
+            </div>
+            <span class="progress-pct-text">82%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            16 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Communication: 86%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-010')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-010')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">MC</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Michael Chang</span>
+              <span class="emp-cell-email">michael.chang@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">DevOps Technician</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">DevOps</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">2.8 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 80%;"></div>
+            </div>
+            <span class="progress-pct-text">80%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            16 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Cloud/DevOps: 88%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-011')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-011')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">SA</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Sofia Al-Mansoor</span>
+              <span class="emp-cell-email">sofia.almansoor@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Junior Project Coordinator</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Project Management</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.4 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 84%;"></div>
+            </div>
+            <span class="progress-pct-text">84%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            16 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Communication: 98%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-012')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-012')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">LO</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Liam O'Connor</span>
+              <span class="emp-cell-email">liam.oconnor@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Software Engineer (Embedded &amp; C)</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Core Systems</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">4.3 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 86%;"></div>
+            </div>
+            <span class="progress-pct-text">86%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            C: 96%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-013')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-013')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">ML</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Maya Lin</span>
+              <span class="emp-cell-email">maya.lin@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Java Developer</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Enterprise Applications</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">3.4 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill green" style="width: 86%;"></div>
+            </div>
+            <span class="progress-pct-text">86%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            17 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Java: 92%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-014')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-014')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar-cell">VM</div>
+            <div class="emp-cell-meta">
+              <span class="emp-cell-name">Vikram Malhotra</span>
+              <span class="emp-cell-email">vikram.malhotra@leadsync.io</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 500; color: var(--text-light);">Associate Solutions Architect</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Architecture</div>
+        </td>
+        <td>
+          <span style="font-family: var(--font-mono); font-weight: 600;">5.8 yrs</span>
+        </td>
+        <td style="min-width: 170px;">
+          <div class="progress-bar-wrapper">
+            <div class="progress-track">
+              <div class="progress-fill cyan" style="width: 75%;"></div>
+            </div>
+            <span class="progress-pct-text">75%</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            15 / 20 Questions
+          </div>
+        </td>
+        <td>
+          <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+            Architecture: 95%
+          </span>
+        </td>
+        <td>
+          <span class="status-pill status-cyan">● 6-12 Months</span>
+        </td>
+        <td style="text-align: right;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal('EMP-015')">Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="inspectEmployeeInSuitability('EMP-015')">Analyze Fit</button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: EMPLOYEE DASHBOARD (SELF-SERVICE) -->
+        <!-- ========================================== -->
+        <section id="tab-employee" class="tab-pane" style="display: none;" aria-labelledby="link-tab-employee">
+          <div class="view-header">
+            <div class="header-left">
+              <h1 class="view-title">My Career &amp; Assessment Hub</h1>
+              <p class="view-subtitle">Review personal assessments, take timed 20-question tests, and explore your leadership succession trajectory.</p>
+            </div>
+            <div class="header-actions">
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Viewing as:</span>
+              <select id="emp-tab-user-select" class="form-select" style="min-width: 200px;"><option value="EMP-001">Alex Rivera (Jr. Software Engineer)</option><option value="EMP-002">Priya Sharma (Frontend Engineer)</option><option value="EMP-003">Marcus Chen (Backend Developer)</option><option value="EMP-004">Sarah Jenkins (Full Stack Engineer)</option><option value="EMP-005">David Kim (Systems Analyst)</option><option value="EMP-006">Elena Rostova (Junior AI Developer)</option><option value="EMP-007">James Wilson (Cloud &amp; Infrastructure Associate)</option><option value="EMP-008">Ananya Patel (Data Analyst)</option><option value="EMP-009">Carlos Gomez (Database Support Engineer)</option><option value="EMP-010">Rachel Green (QA &amp; Automation Engineer)</option><option value="EMP-011">Michael Chang (DevOps Technician)</option><option value="EMP-012">Sofia Al-Mansoor (Junior Project Coordinator)</option><option value="EMP-013">Liam O'Connor (Software Engineer (Embedded &amp; C))</option><option value="EMP-014">Maya Lin (Java Developer)</option><option value="EMP-015">Vikram Malhotra (Associate Solutions Architect)</option></select>
+            </div>
+          </div>
+
+          <!-- Active Assessment Callout Box -->
+          <div class="glass-card" style="margin-bottom: 24px; border-color: #c7d2fe; background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+              <div>
+                <span class="badge-tag" style="background: var(--accent-primary); color: white; margin-bottom: 8px; display: inline-block;">Assigned Assessment</span>
+                <h2 id="emp-assigned-asm-title" style="font-size: 1.4rem;">LeadSync 2026 Technical &amp; Leadership Readiness Assessment</h2>
+                <p id="emp-assigned-asm-desc" style="color: var(--text-secondary); margin-top: 4px; font-size: 0.9rem;">
+                  20 randomized questions covering Python, C, Java, DBMS, Architecture, Communication, and Aptitude.
+                </p>
+                <div style="display: flex; gap: 16px; margin-top: 10px; font-size: 0.84rem; color: var(--text-secondary);">
+                  <span>⏱ Duration: <strong>30 mins</strong></span>
+                  <span>📅 Scheduled: <strong>Oct 18, 2026 at 14:00</strong></span>
+                  <span>🎯 Format: <strong>20 Multiple Choice Questions</strong></span>
+                </div>
+              </div>
+              <button id="btn-take-assessment" class="btn btn-emerald" style="padding: 12px 24px; font-size: 0.95rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Take Assessment Now
+              </button>
+            </div>
+          </div>
+
+          <!-- Employee Profile Details -->
+          <div id="emp-self-profile-card" class="glass-card">
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+      <div style="width: 80px; height: 80px; border-radius: var(--radius-full); background: linear-gradient(135deg, #3b82f6, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: white;">
+        AR
+      </div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h2 style="font-size: 1.5rem; margin-bottom: 2px;">Alex Rivera</h2>
+            <div style="color: var(--accent-cyan); font-weight: 600; font-size: 0.95rem;">
+              Jr. Software Engineer • Engineering
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px;">
+              alex.rivera@leadsync.io • Experience: <strong>2.5 Years</strong> • Education: B.S. in Computer Science - University of Washington
+            </div>
+          </div>
+          <div>
+            <span class="status-pill status-emerald" style="font-size: 0.8rem;">
+              Assessment: 75% (15/20 Correct)
+            </span>
+          </div>
+        </div>
+
+        <p style="margin-top: 14px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
+          Passionate full-stack developer focused on microservices, React UI, and distributed backends. Fast learner with strong analytical skills.
+        </p>
+
+        <!-- Completed Projects Section -->
+        <div style="margin-top: 24px;">
+          <h3 style="font-size: 1.05rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>💼 Completed Production Projects</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">(2 verified projects)</span>
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+            
+              <div style="background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">LeadSync Microservices Migration</div>
+                <div style="font-size: 0.76rem; color: var(--accent-cyan); margin-top: 2px; font-weight: 600;">Role: Backend Contributor (6 mos)</div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 6px;">Migrated legacy monolith user endpoints to containerized FastAPI microservices.</p>
+                <div style="font-size: 0.78rem; color: #059669; margin-top: 6px; font-weight: 600;">Impact: Reduced response latency by 34% across user authentication.</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+                  <span class="cat-mini-tag">Python</span><span class="cat-mini-tag">FastAPI</span><span class="cat-mini-tag">Docker</span><span class="cat-mini-tag">PostgreSQL</span>
+                </div>
+              </div>
+            
+              <div style="background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">Customer Portal Redesign</div>
+                <div style="font-size: 0.76rem; color: var(--accent-cyan); margin-top: 2px; font-weight: 600;">Role: Full Stack Dev (4 mos)</div>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 6px;">Rebuilt client-facing onboarding flow with reactive components and secure tokens.</p>
+                <div style="font-size: 0.78rem; color: #059669; margin-top: 6px; font-weight: 600;">Impact: Boosted self-service onboarding completion by 28%.</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+                  <span class="cat-mini-tag">React</span><span class="cat-mini-tag">TypeScript</span><span class="cat-mini-tag">Node.js</span><span class="cat-mini-tag">Redis</span>
+                </div>
+              </div>
+            
+          </div>
+        </div>
+
+        <!-- Existing Skills Matrix -->
+        <div style="margin-top: 24px;">
+          <h3 style="font-size: 1.05rem; margin-bottom: 12px;">Existing Core Technical &amp; Leadership Skills</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Python</span>
+                  <strong style="color: var(--text-light);">82%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width: 82%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">C</span>
+                  <strong style="color: var(--text-light);">65%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill cyan" style="width: 65%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Java</span>
+                  <strong style="color: var(--text-light);">70%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill cyan" style="width: 70%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">DBMS</span>
+                  <strong style="color: var(--text-light);">75%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill cyan" style="width: 75%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Cloud/DevOps</span>
+                  <strong style="color: var(--text-light);">68%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill cyan" style="width: 68%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Architecture</span>
+                  <strong style="color: var(--text-light);">62%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill amber" style="width: 62%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Communication</span>
+                  <strong style="color: var(--text-light);">80%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width: 80%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Aptitude</span>
+                  <strong style="color: var(--text-light);">85%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width: 85%;"></div>
+                </div>
+              </div>
+            
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
+                  <span style="color: var(--text-secondary);">Leadership</span>
+                  <strong style="color: var(--text-light);">60%</strong>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill amber" style="width: 60%;"></div>
+                </div>
+              </div>
+            
+          </div>
+        </div>
+
+        <!-- Certifications -->
+        <div style="margin-top: 20px;">
+          <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Verified Professional Certifications</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            
+              <span class="status-pill status-cyan" style="font-size: 0.75rem;">
+                ✓ AWS Certified Cloud Practitioner
+              </span>
+            
+              <span class="status-pill status-cyan" style="font-size: 0.75rem;">
+                ✓ Docker Essentials Certified
+              </span>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: ROLE SUITABILITY ANALYSIS -->
+        <!-- ========================================== -->
+        <section id="tab-suitability" class="tab-pane" style="display: none;" aria-labelledby="link-tab-suitability">
+          <div class="view-header">
+            <div class="header-left">
+              <h1 class="view-title">Role Suitability Analysis Engine</h1>
+              <p class="view-subtitle">Select any employee, inspect or simulate their experience, projects, skills, and assessment scores against the 5 Leadership Succession Roles.</p>
+            </div>
+            <div class="header-actions">
+              <button id="btn-suit-ai-recommend" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #7c3aed, #ec4899); border: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span>AI Auto-Select Best Match</span>
+              </button>
+              <button id="btn-reset-simulation" class="btn btn-secondary btn-sm">
+                Reset to Original Data
+              </button>
+            </div>
+          </div>
+
+          <div class="suitability-grid">
+            <!-- Left Controls: Select Candidate, Target Role, and What-if Sliders -->
+            <div class="glass-card suitability-controls">
+              <h2 style="font-size: 1.15rem; margin-bottom: 6px;">Candidate &amp; Role Parameters</h2>
+              
+              <div class="form-group">
+                <label class="form-label" for="suit-select-employee">Select Employee:</label>
+                <select id="suit-select-employee" class="form-select"><option value="EMP-001">Alex Rivera (Jr. Software Engineer)</option><option value="EMP-002">Priya Sharma (Frontend Engineer)</option><option value="EMP-003">Marcus Chen (Backend Developer)</option><option value="EMP-004">Sarah Jenkins (Full Stack Engineer)</option><option value="EMP-005">David Kim (Systems Analyst)</option><option value="EMP-006">Elena Rostova (Junior AI Developer)</option><option value="EMP-007">James Wilson (Cloud &amp; Infrastructure Associate)</option><option value="EMP-008">Ananya Patel (Data Analyst)</option><option value="EMP-009">Carlos Gomez (Database Support Engineer)</option><option value="EMP-010">Rachel Green (QA &amp; Automation Engineer)</option><option value="EMP-011">Michael Chang (DevOps Technician)</option><option value="EMP-012">Sofia Al-Mansoor (Junior Project Coordinator)</option><option value="EMP-013">Liam O'Connor (Software Engineer (Embedded &amp; C))</option><option value="EMP-014">Maya Lin (Java Developer)</option><option value="EMP-015">Vikram Malhotra (Associate Solutions Architect)</option></select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="suit-select-role">Target Leadership Succession Role:</label>
+                <select id="suit-select-role" class="form-select">
+                  <option value="ROLE-SSE">Senior Software Engineer</option>
+                  <option value="ROLE-AIML">AI/ML Engineer</option>
+                  <option value="ROLE-DEVOPS">DevOps Engineer</option>
+                  <option value="ROLE-DBA">Database Administrator</option>
+                  <option value="ROLE-PM">Project Team Leader (Project Manager)</option>
+                </select>
+              </div>
+
+              <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 6px 0;">
+              
+              <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--accent-cyan);">
+                Simulate / What-If Adjustments
+              </span>
+
+              <!-- Experience Slider -->
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Experience (Years):</span>
+                  <strong id="val-sim-exp">3.5 yrs</strong>
+                </div>
+                <input type="range" id="slider-sim-exp" class="form-slider" min="1" max="10" step="0.5" value="3.5">
+              </div>
+
+              <!-- Assessment Score Slider -->
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Assessment Score (%):</span>
+                  <strong id="val-sim-asm">85%</strong>
+                </div>
+                <input type="range" id="slider-sim-asm" class="form-slider" min="30" max="100" step="1" value="85">
+              </div>
+
+              <!-- Completed Projects Count -->
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Completed Projects Count:</span>
+                  <strong id="val-sim-projects">2 Projects</strong>
+                </div>
+                <input type="range" id="slider-sim-projects" class="form-slider" min="1" max="8" step="1" value="2">
+              </div>
+
+              <!-- Core Technical Skills Sliders -->
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Python Proficiency:</span>
+                  <strong id="val-sim-py">80%</strong>
+                </div>
+                <input type="range" id="slider-sim-py" class="form-slider" min="20" max="100" step="1" value="80">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>C / Systems Proficiency:</span>
+                  <strong id="val-sim-c">65%</strong>
+                </div>
+                <input type="range" id="slider-sim-c" class="form-slider" min="20" max="100" step="1" value="65">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Java Proficiency:</span>
+                  <strong id="val-sim-java">75%</strong>
+                </div>
+                <input type="range" id="slider-sim-java" class="form-slider" min="20" max="100" step="1" value="75">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>DBMS / SQL Proficiency:</span>
+                  <strong id="val-sim-dbms">80%</strong>
+                </div>
+                <input type="range" id="slider-sim-dbms" class="form-slider" min="20" max="100" step="1" value="80">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Communication:</span>
+                  <strong id="val-sim-comm">85%</strong>
+                </div>
+                <input type="range" id="slider-sim-comm" class="form-slider" min="20" max="100" step="1" value="85">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span>Aptitude:</span>
+                  <strong id="val-sim-apt">88%</strong>
+                </div>
+                <input type="range" id="slider-sim-apt" class="form-slider" min="20" max="100" step="1" value="88">
+              </div>
+            </div>
+
+            <!-- Right Results: Live Fit Score, Radar Chart, Strengths & Gaps, AI Recommendation -->
+            <div class="glass-card suitability-output-card">
+              <div class="fit-score-hero">
+                <div class="fit-score-meta">
+                  <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Role Suitability Result</span>
+                  <div id="suit-target-role-title" class="fit-target-role">Senior Software Engineer</div>
+                  <div id="suit-candidate-name" class="fit-candidate-name">Evaluating Alex Rivera (Jr. Software Engineer)</div>
+                  <div style="margin-top: 8px;">
+                    <span id="suit-readiness-badge" class="status-pill status-cyan">Ready in 6-12 Months</span>
+                    <span id="suit-timeframe" style="font-size: 0.78rem; color: var(--text-secondary); margin-left: 8px;">6-12 Months with Mentor</span>
+                  </div>
+                </div>
+                <div id="suit-score-display" class="fit-score-gauge">81%</div>
+              </div>
+
+              <!-- 4 Dimensional Scores -->
+              <div class="dimensions-row">
+                <div class="dimension-box">
+                  <div id="dim-skills-score" class="dim-value">74%</div>
+                  <div class="dim-label">Skills Match (35%)</div>
+                </div>
+                <div class="dimension-box">
+                  <div id="dim-project-score" class="dim-value">86%</div>
+                  <div class="dim-label">Projects Track (25%)</div>
+                </div>
+                <div class="dimension-box">
+                  <div id="dim-asm-score" class="dim-value">85%</div>
+                  <div class="dim-label">Assessment Fit (25%)</div>
+                </div>
+                <div class="dimension-box">
+                  <div id="dim-exp-score" class="dim-value">82%</div>
+                  <div class="dim-label">Experience Fit (15%)</div>
+                </div>
+              </div>
+
+              <!-- Radar Chart for Skills Gap Analysis -->
+              <div>
+                <h3 style="font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                  <span>Skill Gap Benchmark Comparison</span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Candidate vs Target Benchmark</span>
+                </h3>
+                <div class="radar-chart-container">
+                  <canvas id="suitability-radar-chart" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas>
+                </div>
+              </div>
+
+              <!-- AI Succession Recommendation Narrative -->
+              <div class="ai-recommendation-box">
+                <div class="ai-icon-pulse" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                </div>
+                <div>
+                  <h4 style="font-size: 0.94rem; color: #0f172a; margin-bottom: 4px;">AI Succession Recommendation &amp; Trajectory</h4>
+                  <p id="ai-narrative-text" class="ai-narrative-text">Alex Rivera shows an overall suitability score of 81% for Senior Software Engineer. Key strength: Exceeds/Meets Communication benchmark (85% vs 75%). Development priority: Java proficiency gap of 10 points (75% vs 85%). Recommended trajectory: Ready in 6-12 Months (6-12 Months with Mentor).</p>
+                </div>
+              </div>
+
+              <!-- Strengths & Gaps Bullets -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-md); padding: 14px;">
+                  <h5 style="color: #065f46; font-size: 0.82rem; margin-bottom: 8px; text-transform: uppercase;">Key Strengths for Role</h5>
+                  <ul id="suit-strengths-list" style="padding-left: 18px; font-size: 0.82rem; color: #334155; display: flex; flex-direction: column; gap: 4px;"><li>Exceeds/Meets Communication benchmark (85% vs 75%)</li><li>Exceeds/Meets Aptitude benchmark (88% vs 85%)</li><li>High project alignment with verified production impact</li></ul>
+                </div>
+                <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-md); padding: 14px;">
+                  <h5 style="color: #be123c; font-size: 0.82rem; margin-bottom: 8px; text-transform: uppercase;">Growth Areas &amp; Gap Analysis</h5>
+                  <ul id="suit-gaps-list" style="padding-left: 18px; font-size: 0.82rem; color: #334155; display: flex; flex-direction: column; gap: 4px;"><li>Java proficiency gap of 10 points (75% vs 85%)</li><li>C proficiency gap of 10 points (65% vs 75%)</li><li>Architecture proficiency gap of 26 points (62% vs 88%)</li></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: LEADERSHIP SUCCESSION MATRIX (5 ROLES) -->
+        <!-- ========================================== -->
+        <section id="tab-succession" class="tab-pane" style="display: none;" aria-labelledby="link-tab-succession">
+          <div class="view-header">
+            <div class="header-left">
+              <h1 class="view-title">Leadership Succession Roles Planning</h1>
+              <p class="view-subtitle">Strategic talent bench covering the 5 core leadership roles: Senior Software Engineer, AI/ML Engineer, DevOps Engineer, Database Administrator, and Project Team Leader.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-secondary btn-sm" onclick="window.print()">
+                Export Matrix Report
+              </button>
+            </div>
+          </div>
+
+          <div id="succession-roles-container" class="succession-roles-grid">
+      <div class="role-card">
+        <div class="role-card-header">
+          <div>
+            <div class="role-card-title">Senior Software Engineer</div>
+            <div class="role-card-dept">Core Engineering • Target: 4+ yrs exp</div>
+          </div>
+          <span class="bench-badge bench-strong">Strong Bench</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-secondary); background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <span>Ready Now: <strong style="color: #059669;">3</strong></span>
+          <span>In 6-12 Mos: <strong style="color: #0284c7;">11</strong></span>
+          <span>Talent Pool: <strong>15</strong></span>
+        </div>
+
+        <div class="successors-pipeline">
+          <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Top Recommended Successors:</span>
+          
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-004', 'ROLE-SSE')">
+          <div class="successor-left">
+            <span class="successor-rank">#1</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Sarah Jenkins</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Full Stack Engineer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">88%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-003', 'ROLE-SSE')">
+          <div class="successor-left">
+            <span class="successor-rank">#2</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Marcus Chen</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Backend Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">86%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-005', 'ROLE-SSE')">
+          <div class="successor-left">
+            <span class="successor-rank">#3</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">David Kim</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Systems Analyst</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">86%</span>
+          </div>
+        </div>
+      
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('ROLE-SSE')">
+          Evaluate Candidates for Senior Software Engineer →
+        </button>
+      </div>
+    
+      <div class="role-card">
+        <div class="role-card-header">
+          <div>
+            <div class="role-card-title">AI/ML Engineer</div>
+            <div class="role-card-dept">AI &amp; Advanced Analytics • Target: 3+ yrs exp</div>
+          </div>
+          <span class="bench-badge bench-strong">Strong Bench</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-secondary); background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <span>Ready Now: <strong style="color: #059669;">2</strong></span>
+          <span>In 6-12 Mos: <strong style="color: #0284c7;">11</strong></span>
+          <span>Talent Pool: <strong>15</strong></span>
+        </div>
+
+        <div class="successors-pipeline">
+          <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Top Recommended Successors:</span>
+          
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-006', 'ROLE-AIML')">
+          <div class="successor-left">
+            <span class="successor-rank">#1</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Elena Rostova</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Junior AI Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">88%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-004', 'ROLE-AIML')">
+          <div class="successor-left">
+            <span class="successor-rank">#2</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Sarah Jenkins</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Full Stack Engineer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">87%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-003', 'ROLE-AIML')">
+          <div class="successor-left">
+            <span class="successor-rank">#3</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Marcus Chen</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Backend Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-cyan">84%</span>
+          </div>
+        </div>
+      
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('ROLE-AIML')">
+          Evaluate Candidates for AI/ML Engineer →
+        </button>
+      </div>
+    
+      <div class="role-card">
+        <div class="role-card-header">
+          <div>
+            <div class="role-card-title">DevOps Engineer</div>
+            <div class="role-card-dept">Cloud &amp; Infrastructure • Target: 3.5+ yrs exp</div>
+          </div>
+          <span class="bench-badge bench-strong">Strong Bench</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-secondary); background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <span>Ready Now: <strong style="color: #059669;">6</strong></span>
+          <span>In 6-12 Mos: <strong style="color: #0284c7;">9</strong></span>
+          <span>Talent Pool: <strong>15</strong></span>
+        </div>
+
+        <div class="successors-pipeline">
+          <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Top Recommended Successors:</span>
+          
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-003', 'ROLE-DEVOPS')">
+          <div class="successor-left">
+            <span class="successor-rank">#1</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Marcus Chen</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Backend Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">92%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-007', 'ROLE-DEVOPS')">
+          <div class="successor-left">
+            <span class="successor-rank">#2</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">James Wilson</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Cloud &amp; Infrastructure Associate</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">88%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-004', 'ROLE-DEVOPS')">
+          <div class="successor-left">
+            <span class="successor-rank">#3</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Sarah Jenkins</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Full Stack Engineer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">86%</span>
+          </div>
+        </div>
+      
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('ROLE-DEVOPS')">
+          Evaluate Candidates for DevOps Engineer →
+        </button>
+      </div>
+    
+      <div class="role-card">
+        <div class="role-card-header">
+          <div>
+            <div class="role-card-title">Database Administrator</div>
+            <div class="role-card-dept">Data &amp; Platform Reliability • Target: 4+ yrs exp</div>
+          </div>
+          <span class="bench-badge bench-strong">Strong Bench</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-secondary); background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <span>Ready Now: <strong style="color: #059669;">5</strong></span>
+          <span>In 6-12 Mos: <strong style="color: #0284c7;">10</strong></span>
+          <span>Talent Pool: <strong>15</strong></span>
+        </div>
+
+        <div class="successors-pipeline">
+          <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Top Recommended Successors:</span>
+          
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-003', 'ROLE-DBA')">
+          <div class="successor-left">
+            <span class="successor-rank">#1</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Marcus Chen</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Backend Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">93%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-005', 'ROLE-DBA')">
+          <div class="successor-left">
+            <span class="successor-rank">#2</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">David Kim</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Systems Analyst</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">91%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-009', 'ROLE-DBA')">
+          <div class="successor-left">
+            <span class="successor-rank">#3</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Carlos Gomez</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Database Support Engineer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">91%</span>
+          </div>
+        </div>
+      
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('ROLE-DBA')">
+          Evaluate Candidates for Database Administrator →
+        </button>
+      </div>
+    
+      <div class="role-card">
+        <div class="role-card-header">
+          <div>
+            <div class="role-card-title">Project Team Leader (Project Manager)</div>
+            <div class="role-card-dept">Engineering Management &amp; Delivery • Target: 4.5+ yrs exp</div>
+          </div>
+          <span class="bench-badge bench-strong">Strong Bench</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-secondary); background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <span>Ready Now: <strong style="color: #059669;">1</strong></span>
+          <span>In 6-12 Mos: <strong style="color: #0284c7;">13</strong></span>
+          <span>Talent Pool: <strong>15</strong></span>
+        </div>
+
+        <div class="successors-pipeline">
+          <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Top Recommended Successors:</span>
+          
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-012', 'ROLE-PM')">
+          <div class="successor-left">
+            <span class="successor-rank">#1</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Sofia Al-Mansoor</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Junior Project Coordinator</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-emerald">86%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-004', 'ROLE-PM')">
+          <div class="successor-left">
+            <span class="successor-rank">#2</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Sarah Jenkins</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Full Stack Engineer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-cyan">83%</span>
+          </div>
+        </div>
+      
+        <div class="successor-item" onclick="inspectEmployeeForRole('EMP-003', 'ROLE-PM')">
+          <div class="successor-left">
+            <span class="successor-rank">#3</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="successor-name">Marcus Chen</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Backend Developer</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-cyan">80%</span>
+          </div>
+        </div>
+      
+        </div>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('ROLE-PM')">
+          Evaluate Candidates for Project Team Leader (Project Manager) →
+        </button>
+      </div>
+    </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 6: AI ROLE MATCHER & CANDIDATE RECOMMENDER -->
+        <!-- ========================================== -->
+        <section id="tab-ai-matcher" class="tab-pane" style="display: none;" aria-labelledby="link-tab-ai-matcher">
+          <div class="view-header">
+            <div class="header-left">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-tag" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; font-weight: 700;">
+                  LeadSync AI Engine
+                </span>
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Succession Matching 2.0</span>
+              </div>
+              <h1 class="view-title" style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+                AI Role Matcher &amp; Perfect Candidate Discovery
+              </h1>
+              <p class="view-subtitle">
+                AI analyzes all HR data, completed 20-question assessments (Python, C, Java, DBMS, Aptitude), verified production projects, and competencies to crown the single best, perfect employee for any role.
+              </p>
+            </div>
+            <div class="header-actions">
+              <button id="btn-export-ai-report" class="btn btn-secondary btn-sm" onclick="exportAIReport()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print / Export Report
+              </button>
+            </div>
+          </div>
+
+          <div class="ai-matcher-grid">
+            <!-- Left Panel: HR Criteria & Role Configuration -->
+            <div class="glass-card ai-controls-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                <h2 style="font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                  <span style="color: #8b5cf6;">⚙</span> HR Role &amp; Job Criteria
+                </h2>
+                <div class="ai-mode-toggle">
+                  <button id="btn-mode-preset" class="btn-toggle-pill active" onclick="setAIMatcherMode('preset')">Leadership Roles</button>
+                  <button id="btn-mode-custom" class="btn-toggle-pill" onclick="setAIMatcherMode('custom')">Custom Role / JD</button>
+                </div>
+              </div>
+
+              <!-- PRESET ROLE MODE -->
+              <div id="ai-section-preset">
+                <div class="form-group">
+                  <label class="form-label" for="ai-select-preset-role">Target Leadership Succession Role:</label>
+                  <select id="ai-select-preset-role" class="form-select">
+                    <option value="ROLE-SSE">Senior Software Engineer</option>
+                    <option value="ROLE-AIML">AI/ML Engineer</option>
+                    <option value="ROLE-DEVOPS">DevOps Engineer</option>
+                    <option value="ROLE-DBA">Database Administrator (DBA)</option>
+                    <option value="ROLE-PM">Project Team Leader / Project Manager</option>
+                  </select>
+                </div>
+                <div id="ai-preset-role-summary" class="preset-role-box">
+    <div style="font-weight: 700; color: #1e1b4b; font-size: 0.92rem; margin-bottom: 4px;">
+      Senior Software Engineer • Core Engineering
+    </div>
+    <div class="role-desc">Leads system design, core codebase architecture, code reviews, and mentors mid &amp; junior developers across full-stack and backend systems.</div>
+    <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+      Target Seniority: <strong>4+ Years</strong> | Benchmark Skills:
+    </div>
+    <div class="role-badges">
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">Python: 85%</span>
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">Java: 85%</span>
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">C: 75%</span>
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">DBMS: 85%</span>
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">Architecture: 88%</span>
+      
+        <span class="status-pill status-cyan" style="font-size: 0.73rem;">Cloud/DevOps: 78%</span>
+      
+    </div>
+  </div>
+              </div>
+
+              <!-- CUSTOM ROLE / JD MODE -->
+              <div id="ai-section-custom" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label" for="ai-custom-title">Custom Role Title:</label>
+                  <input type="text" id="ai-custom-title" class="form-input" placeholder="e.g. Lead Distributed Systems Architect" value="Senior Backend &amp; Systems Architect">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="form-group">
+                    <label class="form-label" for="ai-custom-dept">Department:</label>
+                    <select id="ai-custom-dept" class="form-select">
+                      <option value="Engineering">Engineering</option>
+                      <option value="DevOps">DevOps</option>
+                      <option value="Infrastructure">Infrastructure</option>
+                      <option value="AI &amp; Research">AI &amp; Research</option>
+                      <option value="Data &amp; Analytics">Data &amp; Analytics</option>
+                      <option value="Project Management">Project Management</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="ai-custom-exp">Min. Experience (Yrs):</label>
+                    <input type="number" id="ai-custom-exp" class="form-input" min="1" max="15" step="0.5" value="4.0">
+                  </div>
+                </div>
+
+                <!-- Job Description Paste Box with 1-click Auto-Extract -->
+                <div class="form-group" style="margin-top: 10px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" for="ai-custom-jd-text" style="margin-bottom: 0;">Paste HR Job Description / Requirements:</label>
+                    <button type="button" id="btn-parse-jd" class="btn btn-secondary btn-xs" style="font-size: 0.72rem; padding: 2px 8px; color: #7c3aed; border-color: #ddd6fe;">
+                      ⚡ AI Auto-Extract
+                    </button>
+                  </div>
+                  <textarea id="ai-custom-jd-text" class="form-textarea" rows="3" placeholder="e.g. We require a senior backend engineer with 4+ years experience in Python and PostgreSQL. Must have demonstrated microservices sharding experience, high availability, and strong communication skills."></textarea>
+                </div>
+
+                <!-- Core Skill Requirement Sliders -->
+                <div style="margin-top: 14px;">
+                  <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--accent-cyan);">
+                    Benchmark Skill Thresholds (%):
+                  </span>
+                  <div class="ai-custom-sliders-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">Python:</span> <strong id="val-ai-py" style="font-size: 0.76rem;">85%</strong></div>
+                      <input type="range" id="slider-ai-py" class="form-slider" min="30" max="100" value="85">
+                    </div>
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">C / Systems:</span> <strong id="val-ai-c" style="font-size: 0.76rem;">70%</strong></div>
+                      <input type="range" id="slider-ai-c" class="form-slider" min="30" max="100" value="70">
+                    </div>
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">Java:</span> <strong id="val-ai-java" style="font-size: 0.76rem;">80%</strong></div>
+                      <input type="range" id="slider-ai-java" class="form-slider" min="30" max="100" value="80">
+                    </div>
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">DBMS / SQL:</span> <strong id="val-ai-dbms" style="font-size: 0.76rem;">85%</strong></div>
+                      <input type="range" id="slider-ai-dbms" class="form-slider" min="30" max="100" value="85">
+                    </div>
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">Communication:</span> <strong id="val-ai-comm" style="font-size: 0.76rem;">75%</strong></div>
+                      <input type="range" id="slider-ai-comm" class="form-slider" min="30" max="100" value="75">
+                    </div>
+                    <div class="slider-group">
+                      <div class="slider-header"><span style="font-size: 0.76rem;">Aptitude:</span> <strong id="val-ai-apt" style="font-size: 0.76rem;">80%</strong></div>
+                      <input type="range" id="slider-ai-apt" class="form-slider" min="30" max="100" value="80">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filter by Candidate Department -->
+              <div class="form-group" style="margin-top: 14px;">
+                <label class="form-label" for="ai-filter-candidate-dept">Candidate Department Filter:</label>
+                <select id="ai-filter-candidate-dept" class="form-select">
+                  <option value="all">Evaluate Entire Company (All 15 Employees)</option>
+                  <option value="Engineering">Engineering Department</option>
+                  <option value="DevOps">DevOps Department</option>
+                  <option value="AI &amp; Research">AI &amp; Research Department</option>
+                  <option value="Data &amp; Analytics">Data &amp; Analytics Department</option>
+                  <option value="Infrastructure">Infrastructure Department</option>
+                  <option value="Project Management">Project Management Department</option>
+                </select>
+              </div>
+
+              <!-- AI Run Button -->
+              <div style="margin-top: 20px;">
+                <button id="btn-run-ai-match" class="btn btn-primary" style="width: 100%; padding: 14px; justify-content: center; font-size: 0.98rem; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; box-shadow: 0 4px 18px rgba(124, 58, 237, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <span>Analyze &amp; Find Perfect Employee</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Panel: The Perfect Employee Showcase -->
+            <div class="ai-results-panel">
+              <!-- Loading Indicator -->
+              <div id="ai-matching-spinner" style="display: none;" class="glass-card ai-spinner-card">
+                <div class="spinner-ring"></div>
+                <h3 style="margin-top: 16px; font-size: 1.15rem; color: #4338ca;">Analyzing Candidate Evidence with AI...</h3>
+                <p style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 4px;">
+                  Evaluating 20-Q assessments, project semantic impact, skill benchmarks, and tenure curves across candidate pool.
+                </p>
+              </div>
+
+              <!-- The Hero Card: #1 Best Perfect Employee -->
+              <div id="ai-perfect-employee-card" class="glass-card hero-candidate-card">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Head-to-Head Comparison Card (Best vs Runner-up) -->
+              <div id="ai-head-to-head-card" class="glass-card" style="margin-top: 20px; display: none;">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Radar Chart for Visual Skill Gap Analysis -->
+              <div class="glass-card" style="margin-top: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <div>
+                    <h3 style="font-size: 1.1rem; color: #0f172a;">AI Benchmark Skill Alignment</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Direct proficiency comparison of the Perfect Employee vs Role Benchmark Requirements.</p>
+                  </div>
+                  <span id="ai-radar-match-label" class="badge-tag" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;">Multi-Factor Match</span>
+                </div>
+                <div class="radar-chart-container" style="max-height: 320px;">
+                  <canvas id="ai-match-radar-chart"></canvas>
+                </div>
+              </div>
+
+              <!-- Full Ranked Cohort Table -->
+              <div class="glass-card" style="margin-top: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                  <div>
+                    <h3 style="font-size: 1.15rem; color: #0f172a;">Complete Evaluated Candidate Cohort</h3>
+                    <p style="font-size: 0.82rem; color: var(--text-secondary);">Full ranking of all candidates analyzed against the HR role criteria.</p>
+                  </div>
+                  <span id="ai-total-evaluated-badge" class="badge-tag badge-mgr">15 Evaluated</span>
+                </div>
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                  <table class="leadsync-table">
+                    <thead>
+                      <tr>
+                        <th>Rank</th>
+                        <th>Candidate</th>
+                        <th>Current Role</th>
+                        <th>Experience</th>
+                        <th>AI Match Score</th>
+                        <th>Assessment Fit</th>
+                        <th>Readiness Status</th>
+                        <th style="text-align: right;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ai-ranked-cohort-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: 20-QUESTION ASSESSMENT TEST RUNNER -->
+  <!-- ========================================== -->
+  <div id="modal-assessment-runner" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="test-runner-title">
+    <div class="modal-card test-runner-container">
+      <div class="test-top-bar">
+        <div>
+          <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--accent-primary); font-weight: 700;">Live Interactive Assessment</span>
+          <h2 id="test-runner-title" style="font-size: 1.25rem;">LeadSync 2026 Technical &amp; Leadership Readiness</h2>
+          <div style="font-size: 0.82rem; color: var(--text-secondary);">
+            Employee: <strong id="test-candidate-name" style="color: #0f172a;">Alex Rivera</strong> | Total: 20 Questions
+          </div>
+        </div>
+        <div class="timer-pill">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span id="test-timer-display">29:59</span>
+        </div>
+      </div>
+
+      <!-- Question Number Navigator (1 to 20) -->
+      <div id="test-question-nav" class="question-nav-strip">
+        <!-- 20 dots rendered dynamically -->
+      </div>
+
+      <!-- Active Question Box -->
+      <div class="question-card-body">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span id="test-question-category" class="q-category-tag">Python</span>
+          <span id="test-question-number" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">Question 1 of 20</span>
+        </div>
+        <div id="test-question-text" class="q-title">Loading question...</div>
+        <div id="test-options-container" class="q-options-list">
+          <!-- 4 Multiple Choice Radios -->
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <button id="btn-test-prev" class="btn btn-secondary">← Previous</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="btn-test-cancel" class="btn btn-secondary">Exit Test</button>
+          <button id="btn-test-next" class="btn btn-secondary">Next →</button>
+          <button id="btn-test-submit" class="btn btn-emerald" style="display: none;">Submit Assessment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: SCHEDULE NEW ASSESSMENT (HR) -->
+  <!-- ========================================== -->
+  <div id="modal-create-assessment" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 style="font-size: 1.3rem;">Schedule New Assessment</h2>
+        <button class="modal-close-btn" onclick="closeCreateAssessmentModal()">×</button>
+      </div>
+      <form id="form-create-assessment" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="asm-title">Assessment Title:</label>
+          <input type="text" id="asm-title" class="form-input" required="" placeholder="e.g. Q4 Core Systems &amp; Leadership Evaluation" value="Q4 Systems Engineering &amp; DBMS Readiness">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="asm-desc">Description / Scope:</label>
+          <input type="text" id="asm-desc" class="form-input" placeholder="Evaluates Python, C, Java, DBMS, Architecture, Communication, and Aptitude." value="Evaluates Python, C, Java, DBMS, Technical Architecture, Communication, and Aptitude.">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="asm-date">Scheduled Date:</label>
+            <input type="date" id="asm-date" class="form-input" required="" value="2026-10-22">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="asm-time">Scheduled Time:</label>
+            <input type="time" id="asm-time" class="form-input" required="" value="15:30">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="asm-duration">Duration (Minutes):</label>
+            <input type="number" id="asm-duration" class="form-input" min="15" max="120" value="30" required="">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Questions per Candidate:</label>
+            <input type="text" class="form-input" value="20 Questions (Auto-balanced)" disabled="" style="background: #f1f5f9; color: #475569;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Topics Covered (Auto-Generated 20 Questions):</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+            <span class="cat-mini-tag" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">Python (3)</span>
+            <span class="cat-mini-tag" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">C (3)</span>
+            <span class="cat-mini-tag" style="background: #fef3c7; color: #b45309; border-color: #fde68a;">Java (3)</span>
+            <span class="cat-mini-tag" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">DBMS (3)</span>
+            <span class="cat-mini-tag" style="background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe;">Other Technical Skills (3)</span>
+            <span class="cat-mini-tag" style="background: #fff1f2; color: #be123c; border-color: #fecdd3;">Communication (3)</span>
+            <span class="cat-mini-tag" style="background: #e0f2fe; color: #0284c7; border-color: #bae6fd;">Aptitude (2)</span>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeCreateAssessmentModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Schedule &amp; Assign Assessment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ADD EMPLOYEE (HR DATABASE EXPANSION) -->
+  <!-- ========================================== -->
+  <div id="modal-add-employee" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 style="font-size: 1.3rem;">Add New Employee to LeadSync</h2>
+        <button class="modal-close-btn" onclick="closeAddEmployeeModal()">×</button>
+      </div>
+      <form id="form-add-employee" style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="add-emp-name">Full Name:</label>
+            <input type="text" id="add-emp-name" class="form-input" required="" placeholder="e.g. Jessica Wu">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add-emp-role">Current Job Role:</label>
+            <input type="text" id="add-emp-role" class="form-input" required="" placeholder="e.g. Cloud Engineer">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="add-emp-dept">Department:</label>
+            <select id="add-emp-dept" class="form-select">
+              <option value="Engineering">Engineering</option>
+              <option value="DevOps">DevOps</option>
+              <option value="Infrastructure">Infrastructure</option>
+              <option value="AI &amp; Research">AI &amp; Research</option>
+              <option value="Data &amp; Analytics">Data &amp; Analytics</option>
+              <option value="Quality Engineering">Quality Engineering</option>
+              <option value="Project Management">Project Management</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add-emp-exp">Experience (Years):</label>
+            <input type="number" id="add-emp-exp" class="form-input" step="0.5" min="0.5" max="25" value="3.0" required="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-emp-email">Corporate Email:</label>
+          <input type="email" id="add-emp-email" class="form-input" required="" placeholder="jessica.wu@leadsync.io">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-emp-bio">Professional Summary:</label>
+          <textarea id="add-emp-bio" class="form-textarea" rows="2" placeholder="Brief career overview, engineering strengths, and leadership interests."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="add-emp-projects">Primary Completed Project:</label>
+          <input type="text" id="add-emp-project-title" class="form-input" placeholder="Project Name: e.g. Event Streaming Platform Migration">
+          <input type="text" id="add-emp-project-desc" class="form-input" style="margin-top: 6px;" placeholder="Impact: e.g. Reduced latency by 40% across distributed services.">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeAddEmployeeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save &amp; Enroll Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: DEDICATED EMPLOYEE PROFILE DRAWER -->
+  <!-- ========================================== -->
+  <div id="modal-employee-profile" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 760px;">
+      <div class="modal-header">
+        <h2 style="font-size: 1.3rem;">Dedicated Employee Profile</h2>
+        <button class="modal-close-btn" onclick="closeProfileModal()">×</button>
+      </div>
+      <div id="modal-profile-content">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  <!-- ========================================== -->
+  <!-- MODAL: IMAGE LIGHTBOX (CERTIFICATES & RESUME) -->
+  <!-- ========================================== -->
+  <div id="modal-image-lightbox" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-card" style="max-width: 860px; max-height: 90vh; padding: 20px; overflow-y: auto;">
+      <div class="modal-header" style="margin-bottom: 12px;">
+        <div>
+          <h2 id="lightbox-modal-title" style="font-size: 1.25rem; color: #1e1b4b;">Document Viewer</h2>
+          <span id="lightbox-modal-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);">Verified Credential Dossier</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeImageLightbox()">×</button>
+      </div>
+      <div id="lightbox-modal-body" style="text-align: center; background: #0f172a; padding: 16px; border-radius: 8px;">
+        <img id="lightbox-modal-img" src="" alt="Full size preview" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/app.js"></script>
+
+
+</div></body></html>

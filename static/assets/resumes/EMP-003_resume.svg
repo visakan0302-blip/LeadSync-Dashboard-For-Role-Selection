@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 920" width="700" height="920">
+  <defs>
+    <linearGradient id="headGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Resume Sheet -->
+  <rect width="700" height="920" fill="#ffffff" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+  
+  <!-- Header Bar -->
+  <rect width="700" height="120" fill="url(#headGrad)" rx="8"/>
+  <text x="45" y="50" font-family="'Segoe UI', Inter, sans-serif" font-size="26" font-weight="800" fill="#ffffff">Marcus Chen</text>
+  <text x="45" y="78" font-family="'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#38bdf8">Backend Developer &bull; Engineering</text>
+  <text x="45" y="98" font-family="sans-serif" font-size="11" fill="#cbd5e1">marcus.chen@leadsync.io | Experience: 4.2 Years | Employee ID: EMP-003</text>
+
+  <!-- Left Column -->
+  <g transform="translate(45, 140)">
+    <rect width="200" height="740" fill="#f8fafc" rx="6" stroke="#e2e8f0" stroke-width="1"/>
+    
+    <!-- Education -->
+    <text x="16" y="32" font-family="sans-serif" font-size="12" font-weight="800" fill="#4338ca" letter-spacing="1">EDUCATION</text>
+    <line x1="16" y1="38" x2="184" y2="38" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="16" y="60" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#0f172a">M.S. in Computer Enginee</text>
+    <text x="16" y="75" font-family="sans-serif" font-size="10" fill="#64748b">ring - Georgia Tech</text>
+    <text x="16" y="90" font-family="sans-serif" font-size="9" fill="#94a3b8">Graduated with Honors</text>
+
+    <!-- Certifications -->
+    <text x="16" y="130" font-family="sans-serif" font-size="12" font-weight="800" fill="#4338ca" letter-spacing="1">CERTIFICATIONS</text>
+    <line x1="16" y1="136" x2="184" y2="136" stroke="#cbd5e1" stroke-width="1"/>
+    
+    <circle cx="22" cy="160" r="3" fill="#6366f1"/>
+    <text x="32" y="164" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#1e293b">Oracle Certified Professi</text>
+    <text x="32" y="178" font-family="sans-serif" font-size="8.5" fill="#64748b">Verified Credential</text>
+    <circle cx="22" cy="206" r="3" fill="#6366f1"/>
+    <text x="32" y="210" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#1e293b">AWS Certified Developer A</text>
+    <text x="32" y="224" font-family="sans-serif" font-size="8.5" fill="#64748b">Verified Credential</text>
+
+    <!-- Core Skills -->
+    <text x="16" y="330" font-family="sans-serif" font-size="12" font-weight="800" fill="#4338ca" letter-spacing="1">CORE COMPETENCIES</text>
+    <line x1="16" y1="336" x2="184" y2="336" stroke="#cbd5e1" stroke-width="1"/>
+    
+    <text x="16" y="360" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">Python</text>
+    <rect x="16" y="368" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="368" width="134" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="392" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">C</text>
+    <rect x="16" y="400" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="400" width="131" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="424" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">Java</text>
+    <rect x="16" y="432" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="432" width="157" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="456" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">DBMS</text>
+    <rect x="16" y="464" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="464" width="154" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="488" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">Cloud/DevOps</text>
+    <rect x="16" y="496" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="496" width="137" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="520" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">Architecture</text>
+    <rect x="16" y="528" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="528" width="151" height="6" rx="3" fill="#4f46e5"/>
+    <text x="16" y="552" font-family="sans-serif" font-size="10" font-weight="600" fill="#334155">Communication</text>
+    <rect x="16" y="560" width="168" height="6" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="560" width="126" height="6" rx="3" fill="#4f46e5"/>
+  </g>
+
+  <!-- Right Column -->
+  <g transform="translate(265, 140)">
+    <!-- Professional Summary -->
+    <text x="0" y="20" font-family="sans-serif" font-size="13" font-weight="800" fill="#1e1b4b" letter-spacing="1">PROFESSIONAL SUMMARY</text>
+    <line x1="0" y1="26" x2="390" y2="26" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="0" y="46" font-family="sans-serif" font-size="11" fill="#475569">Core backend engineer with deep expertise in distributed event-driven </text>
+    <text x="0" y="62" font-family="sans-serif" font-size="11" fill="#475569">architectures, JVM tuning, and high-concurrency systems.</text>
+    <text x="0" y="78" font-family="sans-serif" font-size="11" fill="#475569"></text>
+
+    <!-- Experience -->
+    <text x="0" y="116" font-family="sans-serif" font-size="13" font-weight="800" fill="#1e1b4b" letter-spacing="1">EXPERIENCE &amp; RECORD</text>
+    <line x1="0" y1="122" x2="390" y2="122" stroke="#6366f1" stroke-width="1.5"/>
+    
+    <text x="0" y="146" font-family="sans-serif" font-size="12" font-weight="700" fill="#0f172a">Backend Developer</text>
+    <text x="0" y="162" font-family="sans-serif" font-size="10.5" font-weight="600" fill="#6366f1">LeadSync Technologies &bull; 4.2 Years Tenure</text>
+    <text x="0" y="180" font-family="sans-serif" font-size="10.5" fill="#475569">&bull; Actively leads engineering deliverables and microservice subsystems.</text>
+    <text x="0" y="196" font-family="sans-serif" font-size="10.5" fill="#475569">&bull; Demonstrated high reliability across quarterly technical releases.</text>
+
+    <!-- Projects -->
+    <text x="0" y="238" font-family="sans-serif" font-size="13" font-weight="800" fill="#1e1b4b" letter-spacing="1">VERIFIED PRODUCTION PROJECTS</text>
+    <line x1="0" y1="244" x2="390" y2="244" stroke="#6366f1" stroke-width="1.5"/>
+
+    <!-- Project 1 -->
+    <text x="0" y="268" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">1. High-Throughput Payment Gateway</text>
+    <text x="0" y="284" font-family="sans-serif" font-size="10" font-weight="600" fill="#0284c7">Role: Backend Lead | Stack: Java 21, Spring Boot, Kafka, PostgreSQL</text>
+    <text x="0" y="302" font-family="sans-serif" font-size="10" fill="#475569">Description: Architected resilient payment ingestion pipeline with idempotent proce</text>
+    <text x="0" y="320" font-family="sans-serif" font-size="10" font-weight="700" fill="#059669">Impact: Handled 12,000 TPS with 99.995% uptime during peak holiday sales.</text>
+
+    <!-- Project 2 -->
+    <text x="0" y="358" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#0f172a">2. Legacy Modernization & Zero-Downtime Migration</text>
+    <text x="0" y="374" font-family="sans-serif" font-size="10" font-weight="600" fill="#0284c7">Role: Senior Developer | Stack: Java, Oracle, PostgreSQL, Kubernetes</text>
+    <text x="0" y="392" font-family="sans-serif" font-size="10" fill="#475569">Description: Migrated legacy monolithic stored procedures into decoupled microservi</text>
+    <text x="0" y="410" font-family="sans-serif" font-size="10" font-weight="700" fill="#059669">Impact: Decreased monthly database deadlocks from 142 to 0.</text>
+
+    <!-- Assessment Performance -->
+    <text x="0" y="458" font-family="sans-serif" font-size="13" font-weight="800" fill="#1e1b4b" letter-spacing="1">OFFICIAL ASSESSMENT SCORE</text>
+    <line x1="0" y1="464" x2="390" y2="464" stroke="#6366f1" stroke-width="1.5"/>
+    <rect x="0" y="478" width="390" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="16" y="503" font-family="sans-serif" font-size="12" font-weight="800" fill="#1e1b4b">20-Question Technical &amp; Aptitude Exam: 95%</text>
+    <text x="16" y="523" font-family="sans-serif" font-size="10" fill="#475569">Status: Verified Completed &bull; Score: 19/20 Correct</text>
+    <text x="16" y="538" font-family="sans-serif" font-size="9.5" fill="#6366f1">Tested: Python, Java, C, DBMS, System Architecture, Aptitude</text>
+  </g>
+</svg>
