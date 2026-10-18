@@ -268,7 +268,8 @@ def generate_ai_executive_rationale(
     sec_strength = skills_data["strengths"][1] if len(skills_data["strengths"]) > 1 else project_data.get("evidence_notes", "")
     
     # Highlight project impact
-    top_project = project_data.get("highlighted_projects", [{}])[0]
+    hl_projects = project_data.get("highlighted_projects") or [{}]
+    top_project = hl_projects[0] if hl_projects else {}
     proj_mention = ""
     if top_project and top_project.get("title"):
         proj_mention = f"Most notable was their leadership in '{top_project.get('title')}', delivering {top_project.get('impact', 'proven business results')} using {', '.join(top_project.get('tech_stack', [])[:3])}."

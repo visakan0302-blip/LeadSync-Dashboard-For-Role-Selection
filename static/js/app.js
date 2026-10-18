@@ -328,6 +328,7 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
   const navAiDirect = document.getElementById('nav-item-ai-analyzer-direct');
   const navManager = document.getElementById('nav-item-manager');
   const navEmp = document.getElementById('nav-item-employee');
+  const navAiAssistant = document.getElementById('nav-item-ai-assistant');
 
   // Succession navigation section
   const navGroupTitles = document.querySelectorAll('.nav-group-title');
@@ -355,6 +356,7 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
     if (navHr) navHr.style.display = 'block';
     if (navEmpInfo) navEmpInfo.style.display = 'block';
     if (navAiDirect) navAiDirect.style.display = 'block';
+    if (navAiAssistant) navAiAssistant.style.display = 'block';
     if (navManager) navManager.style.display = 'none';
     if (navEmp) navEmp.style.display = 'none';
 
@@ -382,6 +384,7 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
     if (navHr) navHr.style.display = 'none';
     if (navEmpInfo) navEmpInfo.style.display = 'none';
     if (navAiDirect) navAiDirect.style.display = 'none';
+    if (navAiAssistant) navAiAssistant.style.display = 'block';
     if (navManager) navManager.style.display = 'block';
     if (navEmp) navEmp.style.display = 'none';
 
@@ -410,6 +413,7 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
     if (navHr) navHr.style.display = 'none';
     if (navEmpInfo) navEmpInfo.style.display = 'none';
     if (navAiDirect) navAiDirect.style.display = 'none';
+    if (navAiAssistant) navAiAssistant.style.display = 'none';
     if (navManager) navManager.style.display = 'none';
     if (navEmp) navEmp.style.display = 'block';
 
@@ -667,12 +671,12 @@ window.mountAIAnalyzer = mountAIAnalyzer;
 function navigateToTab(tabId) {
   // Enforce role security guard
   const userRole = state.authenticatedRole || 'hr';
-  if (userRole === 'manager' && tabId !== 'tab-manager') {
+  if (userRole === 'manager' && tabId !== 'tab-manager' && tabId !== 'tab-ai-chat') {
     tabId = 'tab-manager';
   } else if (userRole === 'employee' && tabId !== 'tab-employee') {
     tabId = 'tab-employee';
   } else if (userRole === 'hr') {
-    const hrAllowed = ['tab-hr', 'tab-employee-info', 'tab-ai-matcher', 'tab-suitability', 'tab-succession'];
+    const hrAllowed = ['tab-hr', 'tab-employee-info', 'tab-ai-matcher', 'tab-suitability', 'tab-succession', 'tab-ai-chat'];
     if (!hrAllowed.includes(tabId)) {
       tabId = 'tab-hr';
     }
@@ -706,6 +710,12 @@ function navigateToTab(tabId) {
     });
   } else if (tabId === 'tab-employee-info') {
     initEmployeeInfoTab();
+  } else if (tabId === 'tab-ai-chat') {
+    if (window.api && window.api.getAIMetricsSummary && window.aiAssistant) {
+      window.api.getAIMetricsSummary().then(res => {
+        if (res.success && res.metrics) window.aiAssistant.updateMetrics(res.metrics);
+      }).catch(() => {});
+    }
   }
 }
 

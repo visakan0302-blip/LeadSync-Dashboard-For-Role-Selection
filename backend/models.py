@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Literal
 from pydantic import BaseModel, Field
 
 class ProjectModel(BaseModel):
@@ -97,5 +97,20 @@ class CertificateVerifyRequest(BaseModel):
     title: Optional[str] = "Professional Certification"
     filename: Optional[str] = ""
     issuer: Optional[str] = "Accredited Body"
-    credential_id: Optional[str] = None
     data: Optional[str] = None
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system"]
+    content: str = Field(..., min_length=1, max_length=32000, description="Chat message content")
+
+class AIChatRequest(BaseModel):
+    messages: List[ChatMessage] = Field(..., min_length=1, max_length=50, description="Bounded multi-turn chat message history")
+    include_hr_context: Optional[bool] = Field(default=True, description="Whether to include de-identified aggregated HR metrics")
+
+class AIChatResponse(BaseModel):
+    success: bool
+    reply: Optional[str] = None
+    error: Optional[str] = None
+    metrics_summary: Optional[Dict[str, Any]] = None
+    executed_actions: Optional[List[Dict[str, Any]]] = None
+    ui_action: Optional[Dict[str, Any]] = None

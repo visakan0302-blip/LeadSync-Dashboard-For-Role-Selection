@@ -226,6 +226,60 @@ const api = {
     return await res.json();
   },
 
+  // FreeLLMAPI AI Assistant Endpoints
+  async sendAIChat(messages, includeHrContext = true) {
+    const role = localStorage.getItem('leadsync_auth_role') || 'hr';
+    const email = localStorage.getItem('leadsync_auth_email') || '';
+    const res = await fetch(`${API_BASE}/api/ai/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-LeadSync-Role": role,
+        "X-LeadSync-Email": email
+      },
+      body: JSON.stringify({
+        messages: messages,
+        include_hr_context: includeHrContext
+      })
+    });
+    if (!res.ok) {
+      let errorMsg = `Server error (${res.status})`;
+      try {
+        const errData = await res.json();
+        if (typeof errData.detail === 'string') {
+          errorMsg = errData.detail;
+        } else if (Array.isArray(errData.detail)) {
+          errorMsg = errData.detail.map(d => {
+            if (typeof d === 'string') return d;
+            const field = d.loc ? d.loc.filter(x => x !== 'body').join('.') : '';
+            return `${field ? field + ': ' : ''}${d.msg || JSON.stringify(d)}`;
+          }).join(' | ');
+        } else if (errData.detail && typeof errData.detail === 'object') {
+          errorMsg = errData.detail.msg || JSON.stringify(errData.detail);
+        } else if (typeof errData.error === 'string') {
+          errorMsg = errData.error;
+        } else if (errData.error && typeof errData.error === 'object') {
+          errorMsg = errData.error.message || JSON.stringify(errData.error);
+        } else if (typeof errData.message === 'string') {
+          errorMsg = errData.message;
+        }
+      } catch (parseErr) {
+        // Fallback to default status string
+      }
+      throw new Error(errorMsg);
+    }
+    return await res.json();
+  },
+
+  async getAIMetricsSummary() {
+    const role = localStorage.getItem('leadsync_auth_role') || 'hr';
+    const res = await fetch(`${API_BASE}/api/ai/metrics/summary`, {
+      headers: { "X-LeadSync-Role": role }
+    });
+    if (!res.ok) throw new Error("Failed to load AI metrics summary");
+    return await res.json();
+  },
+
   async resetData() {
     const res = await fetch(`${API_BASE}/api/reset`, {
       method: "POST"

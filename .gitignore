@@ -6,8 +6,15 @@ __pycache__/
 # Browser temporary profile
 .edge_temp/
 
-# Environment secrets
+# Environment secrets & credentials
 .env
+*.env
+*.key
+*.pem
+
+# Uploaded candidate assets & temporary logs
+static/uploads/
+*.log
 
 # OS metadata
 .DS_Store

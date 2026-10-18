@@ -218,6 +218,13 @@
                 <span class="badge-tag" style="background: #4f46e5; color: white; border: none; font-size: 0.72rem; font-weight: 800;">LIVE AI</span>
               </button>
             </li>
+            <li id="nav-item-ai-assistant">
+              <button class="nav-link-btn" data-tab="tab-ai-chat" id="link-tab-ai-chat" style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
+                <span style="font-weight: 700; color: #065f46;">AI HR Assistant</span>
+                <span class="badge-tag" style="background: #10b981; color: white; border: none; font-size: 0.68rem; font-weight: 800;">FreeLLM</span>
+              </button>
+            </li>
             <li id="nav-item-manager">
               <button class="nav-link-btn" data-tab="tab-manager" id="link-tab-manager">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -1591,6 +1598,91 @@
             </div>
           </div>
         </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 8: AI HR ASSISTANT (FreeLLMAPI Gateway) -->
+        <!-- ========================================== -->
+        <section id="tab-ai-chat" class="tab-pane" style="display: none;" aria-labelledby="link-tab-ai-chat">
+          <div class="view-header" style="margin-bottom: 20px;">
+            <div class="header-left">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h1 class="view-title" style="margin: 0;">AI HR Analytics Assistant</h1>
+                <span class="badge-tag" style="background: #10b981; color: white; border: none; font-weight: 700;">FreeLLMAPI Unified Gateway</span>
+              </div>
+              <p class="view-subtitle">
+                Enterprise AI advisor for workforce insights, department distribution, technical skill trends, and assessment performance.
+              </p>
+            </div>
+            <div class="header-right">
+              <button id="ai-chat-btn-clear" class="btn btn-secondary btn-sm" title="Clear conversation history">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span>Clear History</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Metrics Ribbon (Live Python Computed Aggregates) -->
+          <div class="ai-metrics-ribbon">
+            <div class="ai-ribbon-card">
+              <span class="ribbon-label">Workforce Headcount</span>
+              <span id="ai-ribbon-headcount" class="ribbon-value">15</span>
+              <span class="ribbon-sub">Active Engineering Staff</span>
+            </div>
+            <div class="ai-ribbon-card">
+              <span class="ribbon-label">Departments</span>
+              <span id="ai-ribbon-depts" class="ribbon-value">--</span>
+              <span class="ribbon-sub">Organizational Units</span>
+            </div>
+            <div class="ai-ribbon-card">
+              <span class="ribbon-label">Assessment Completion</span>
+              <span id="ai-ribbon-completion" class="ribbon-value">--%</span>
+              <span class="ribbon-sub">20-Question Readiness</span>
+            </div>
+            <div class="ai-ribbon-card">
+              <span class="ribbon-label">Average Score</span>
+              <span id="ai-ribbon-avg-score" class="ribbon-value">--%</span>
+              <span class="ribbon-sub">Completed Tests</span>
+            </div>
+          </div>
+
+          <!-- Chat Card Container -->
+          <div class="glass-card ai-chat-main-card">
+            <!-- Suggested Prompts Strip -->
+            <div class="ai-suggested-strip">
+              <span class="ai-suggested-title">💡 Suggested Prompts:</span>
+              <div id="ai-chat-suggested-chips" class="ai-chips-container">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div id="ai-chat-messages-stream" class="ai-chat-stream">
+              <!-- Populated by ai_assistant.js -->
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="ai-chat-loading-indicator" class="ai-loading-box" style="display: none;">
+              <div class="ai-typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">LeadSync AI Assistant is analyzing HR data...</span>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="ai-chat-input-bar">
+              <textarea id="ai-chat-input-text" class="ai-chat-textarea" placeholder="Ask a question about workforce analytics, skills, assessment scores, or HR strategy..." rows="1"></textarea>
+              <button id="ai-chat-btn-send" class="btn btn-primary ai-send-btn" title="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>Send</span>
+              </button>
+            </div>
+
+            <!-- Privacy & Legal Guardrail Notice -->
+            <div class="ai-chat-privacy-footer">
+              🔒 <strong>Data Protection &amp; Decision Notice:</strong> All metrics are factual, aggregated, and de-identified in Python before reaching the AI. Individual employee PII is strictly protected. AI recommendations are decision-support suggestions requiring human review and never constitute automated employment decisions.
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   </div>
@@ -1913,6 +2005,7 @@
   <!-- Scripts -->
   <script src="/static/js/api.js?v=4.2.0"></script>
   <script src="/static/js/charts.js?v=4.2.0"></script>
+  <script src="/static/js/ai_assistant.js?v=4.2.0"></script>
   <script src="/static/js/app.js?v=4.2.0"></script>
 </body>
 </html>

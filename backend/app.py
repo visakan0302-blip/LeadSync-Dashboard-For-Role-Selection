@@ -28,6 +28,7 @@ from backend.ai_matcher import (
     analyze_candidate_comprehensive_eligibility
 )
 from backend.it_skills_data import IT_SKILLS_CATALOG, ALL_IT_SKILLS
+from backend.ai_assistant import router as ai_assistant_router
 
 
 app = FastAPI(
@@ -35,6 +36,9 @@ app = FastAPI(
     description="Enterprise Dashboard supporting HR, Manager, and Employee roles with succession planning and 20-question assessments.",
     version="2.0.0"
 )
+
+# Mount FreeLLMAPI AI Assistant Router
+app.include_router(ai_assistant_router)
 
 # Enable CORS for local development flexibility
 app.add_middleware(
