@@ -20,13 +20,20 @@ def find_available_port(start_port=8888):
     return start_port
 
 if __name__ == "__main__":
-    port = find_available_port(8888)
+    env_port = os.environ.get("PORT")
+    if env_port:
+        port = int(env_port)
+        host = "0.0.0.0"
+    else:
+        port = find_available_port(8888)
+        host = "127.0.0.1"
+
     print("=" * 60)
     print(" LeadSync Role Succession & Assessment Platform")
     print(f" Python Executable: {sys.executable}")
     print(f" Python Version:    {sys.version.split()[0]}")
-    print(f" Server URL:        http://127.0.0.1:{port}")
-    print(f" API Documentation: http://127.0.0.1:{port}/docs")
+    print(f" Server URL:        http://{host}:{port}")
+    print(f" API Documentation: http://{host}:{port}/docs")
     print("=" * 60)
 
-    uvicorn.run("backend.app:app", host="127.0.0.1", port=port, reload=False)
+    uvicorn.run("backend.app:app", host=host, port=port, reload=False)
