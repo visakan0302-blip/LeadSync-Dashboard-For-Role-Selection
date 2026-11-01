@@ -332,8 +332,8 @@ function renderGoogleButtons() {
   const btnOptions = {
     type: 'standard',
     theme: 'outline',
-    size: 'large',
-    text: 'continue_with',
+    size: 'medium',
+    text: 'signin_with',
     shape: 'rectangular',
     logo_alignment: 'left',
     width: 270
