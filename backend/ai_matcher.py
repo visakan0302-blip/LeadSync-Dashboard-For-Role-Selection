@@ -172,11 +172,11 @@ def score_assessment_fit(emp: Dict[str, Any], priority_categories: Dict[str, flo
     asm = emp.get("assessment_scores", {})
     if not asm or not asm.get("completed", False):
         return {
-            "score": 60,
+            "score": 0,
             "completed": False,
             "overall_pct": 0,
             "category_scores": {},
-            "notes": "Assessment pending; evaluated with baseline provisional score."
+            "notes": "Assessment not attended; score is 0%."
         }
 
     overall_pct = asm.get("score_pct", 70)
@@ -865,10 +865,10 @@ def analyze_candidate_comprehensive_eligibility(
             },
             "assessment_details": {
                 "score_pct": overall_asm_pct,
-                "correct_count": asm.get("correct_count", 16),
+                "correct_count": asm.get("correct_count", 0) if is_asm_completed else 0,
                 "total_questions": asm.get("total_questions", 20),
-                "completed": asm.get("completed", True),
-                "category_scores": cat_scores,
+                "completed": is_asm_completed,
+                "category_scores": cat_scores if is_asm_completed else {},
                 "fit_score": asm_fit_score
             },
             "skills_details": {

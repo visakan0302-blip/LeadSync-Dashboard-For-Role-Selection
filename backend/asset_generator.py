@@ -136,8 +136,9 @@ def generate_all_assets():
         p2_imp = p2.get('impact', '')[:65]
 
         asm = emp.get('assessment_scores', {})
-        score_pct = asm.get('score_pct', 80)
-        correct_cnt = asm.get('correct_count', 16)
+        is_asm_completed = asm.get('completed', False)
+        score_pct = asm.get('score_pct', 0) if is_asm_completed else 0
+        correct_cnt = asm.get('correct_count', 0) if is_asm_completed else 0
 
         resume_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 920" width="700" height="920">
   <defs>
@@ -217,7 +218,7 @@ def generate_all_assets():
     <line x1="0" y1="464" x2="390" y2="464" stroke="#6366f1" stroke-width="1.5"/>
     <rect x="0" y="478" width="390" height="70" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>
     <text x="16" y="503" font-family="sans-serif" font-size="12" font-weight="800" fill="#1e1b4b">20-Question Technical &amp; Aptitude Exam: {score_pct}%</text>
-    <text x="16" y="523" font-family="sans-serif" font-size="10" fill="#475569">Status: Verified Completed &bull; Score: {correct_cnt}/20 Correct</text>
+    <text x="16" y="523" font-family="sans-serif" font-size="10" fill="#475569">{"Status: Verified Completed &bull; Score: " + str(correct_cnt) + "/20 Correct" if is_asm_completed else "Status: Assessment Pending (0% - Not Attended)"}</text>
     <text x="16" y="538" font-family="sans-serif" font-size="9.5" fill="#6366f1">Tested: Python, Java, C, DBMS, System Architecture, Aptitude</text>
   </g>
 </svg>"""

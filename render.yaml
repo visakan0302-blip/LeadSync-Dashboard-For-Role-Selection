@@ -7,3 +7,11 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SESSION_SECRET
+        sync: false

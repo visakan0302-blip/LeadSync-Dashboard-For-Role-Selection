@@ -5,11 +5,17 @@ and allows direct execution (python main.py).
 """
 import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Ensure project root is in sys.path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+# Ensure project root is in sys.path and root .env is loaded
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+ENV_PATH = BASE_DIR / ".env"
+if ENV_PATH.is_file():
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 from backend.app import app
 

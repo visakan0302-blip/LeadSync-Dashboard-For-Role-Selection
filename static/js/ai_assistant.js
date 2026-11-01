@@ -262,11 +262,11 @@
         }
       } else {
         // Show error message as assistant bubble or toast
-        const errMsg = res.error || 'Failed to receive a response from FreeLLMAPI.';
+        const errMsg = res.error || 'Failed to receive a response from the AI Assistant.';
         chatState.messages.push({
           role: 'assistant',
           isError: true,
-          content: `⚠️ **FreeLLMAPI Notice:** ${errMsg}`,
+          content: `⚠️ **AI Assistant Notice:** ${errMsg}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
       }

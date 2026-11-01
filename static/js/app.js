@@ -3,10 +3,69 @@
  * Handles HR, Manager, and Employee workflows, assessment engine, and succession analysis
  */
 
+// Default Comprehensive Computer & IT Skills Taxonomy (Instant Fallback & Preload)
+const DEFAULT_IT_SKILLS_CATALOG = {
+  "Languages": [
+    "Python", "Java", "C", "C++", "C#", "JavaScript", "TypeScript", 
+    "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "SQL", 
+    "Bash/Shell", "R", "Scala", "Dart", "Perl", "Assembly", "Lua", "MATLAB", "Solidity"
+  ],
+  "Frontend & Web": [
+    "React", "Next.js", "Vue.js", "Nuxt.js", "Angular", "Node.js", "HTML5", 
+    "CSS3", "Tailwind CSS", "Bootstrap", "SASS/SCSS", "Redux", "Zustand", "Svelte", 
+    "Vite", "Webpack", "REST APIs", "GraphQL", "WebSockets", "Progressive Web Apps (PWA)"
+  ],
+  "Backend & Frameworks": [
+    "FastAPI", "Django", "Flask", "Spring Boot", "ASP.NET Core", 
+    "Express.js", "NestJS", "Ruby on Rails", "Laravel", "Gin (Go)", "Actix (Rust)",
+    "Microservices", "gRPC", "Apache Kafka", "RabbitMQ", "Celery", "Event-Driven Architecture", "GraphQL APIs"
+  ],
+  "Cloud & DevOps": [
+    "AWS", "Microsoft Azure", "Google Cloud (GCP)", "Docker", 
+    "Kubernetes", "Terraform", "Ansible", "CI/CD Pipelines", 
+    "GitHub Actions", "GitLab CI", "Jenkins", "Linux Admin", "Helm", 
+    "Prometheus", "Grafana", "Nginx", "SRE", "CloudFormation", "ArgoCD"
+  ],
+  "Databases & Big Data": [
+    "PostgreSQL", "MySQL", "MongoDB", "Redis", "Oracle Database", 
+    "SQL Server", "SQLite", "Cassandra", "Elasticsearch", "DynamoDB", "Neo4j", 
+    "Firebase / Firestore", "Supabase", "Apache Spark", "Apache Hadoop", "Snowflake", "Databricks", "ETL Pipelines"
+  ],
+  "AI & Data Science": [
+    "Machine Learning", "Deep Learning", "PyTorch", "TensorFlow", 
+    "Scikit-learn", "Pandas", "NumPy", "NLP", "Computer Vision", 
+    "LLMs & Generative AI", "RAG Systems", "LangChain", "LlamaIndex", "Hugging Face", "MLOps", "Prompt Engineering", "Data Analysis & BI"
+  ],
+  "Cybersecurity & Networks": [
+    "Network Security", "Penetration Testing", "IAM", "OWASP Top 10", 
+    "Cryptography", "Firewalls & VPNs", "SOC Analysis", "Zero Trust Architecture", 
+    "SSL/TLS", "SIEM", "Ethical Hacking", "Wireshark", "Vulnerability Assessment"
+  ],
+  "Systems & Architecture": [
+    "System Design", "Distributed Systems", "Concurrency & Multithreading", 
+    "Operating Systems", "Embedded Systems", "High Availability", "Database Indexing & Sharding", "Caching Architecture", "Load Balancing"
+  ],
+  "Mobile Development": [
+    "Flutter", "React Native", "Android (Kotlin)", "iOS (Swift/SwiftUI)", "Mobile App Architecture", "Expo"
+  ],
+  "Testing & QA Automation": [
+    "Unit Testing", "Integration Testing", "Selenium", "Cypress", "Playwright", "Jest", "PyTest", "Postman / API Testing", "Performance Testing"
+  ],
+  "Leadership & Practices": [
+    "Agile / Scrum", "Sprint Planning", "Jira", "Technical Leadership", 
+    "Engineering Mentorship", "Code Review", "Stakeholder Management", "Incident Response", "DevOps Culture", "Architecture RFCs"
+  ]
+};
+
 // Global State
 const state = {
-  authenticatedRole: localStorage.getItem('leadsync_auth_role') || null, // 'hr' | 'manager' | 'employee' | null
-  currentRole: localStorage.getItem('leadsync_auth_role') || 'hr', // 'hr' | 'manager' | 'employee'
+  authenticatedRole: null, // 'hr' | 'manager' | 'employee' | null
+  authenticatedEmail: null,
+  authenticatedName: null,
+  authenticatedPicture: null,
+  currentRole: 'hr', // 'hr' | 'manager' | 'employee'
+  googleClientId: null,
+  pendingTargetRole: 'hr',
   activeEmployeeId: 'EMP-001',
   employees: [],
   assessments: [],
@@ -33,7 +92,7 @@ const state = {
     targetRoleId: 'ROLE-SSE',
     selectedEmployeeId: 'EMP-001',
     dossier: null,
-    itSkillsCatalog: null,
+    itSkillsCatalog: JSON.parse(JSON.stringify(DEFAULT_IT_SKILLS_CATALOG)),
     selectedSkills: new Set(),
     activeSkillCategory: 'All',
     searchQuery: '',
@@ -65,57 +124,76 @@ const state = {
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
   initEventListeners();
-  await loadInitialData();
   setupRoleSwitcher();
   setupSuitabilityListeners();
   setupAIMatcher();
   await setupHRAIAnalyzer();
+  checkAndUpdateGeminiStatus();
 
-  // Authentication check for Google SSO login with strict email whitelist
-  const savedRole = localStorage.getItem('leadsync_auth_role');
-  const savedEmail = (localStorage.getItem('leadsync_auth_email') || '').trim().toLowerCase();
+  // Initialize Google Identity Services (GIS)
+  await initGoogleAuth();
 
-  let isValidSession = false;
-  if (savedRole === 'hr' && savedEmail === 'visakans.it24@bitsathy.ac.in') {
-    isValidSession = true;
-  } else if (savedRole === 'manager' && savedEmail === 'visakan0302@gmail.com') {
-    isValidSession = true;
-  } else if (savedRole === 'employee' && savedEmail.includes('@') && savedEmail.includes('.')) {
-    isValidSession = true;
+  // Validate active cryptographic session with FastAPI backend (/api/auth/me)
+  try {
+    const sessionRes = await api.checkSession();
+    const user = sessionRes?.user || (sessionRes?.authenticated && sessionRes?.email ? {
+      role: sessionRes.role,
+      email: sessionRes.email,
+      name: sessionRes.name,
+      picture: sessionRes.picture || ''
+    } : null);
+
+    if (sessionRes && sessionRes.authenticated && user) {
+      state.authenticatedRole = user.role;
+      state.authenticatedEmail = user.email;
+      state.authenticatedName = user.name;
+      state.authenticatedPicture = user.picture || '';
+      state.currentRole = user.role;
+
+      const loginSec = document.getElementById('login-section');
+      const appCont = document.getElementById('app-container');
+      if (loginSec) loginSec.style.display = 'none';
+      if (appCont) appCont.style.display = 'flex';
+
+      applyRoleSecurityAndUI(user.role, user.email);
+      await loadInitialData();
+      return;
+    }
+  } catch (sessionErr) {
+    console.warn("No active authenticated session:", sessionErr);
   }
 
-  if (isValidSession) {
-    state.authenticatedRole = savedRole;
-    state.authenticatedEmail = savedEmail;
-    state.currentRole = savedRole;
-    const loginSec = document.getElementById('login-section');
-    const appCont = document.getElementById('app-container');
-    if (loginSec) loginSec.style.display = 'none';
-    if (appCont) appCont.style.display = 'flex';
-    applyRoleSecurityAndUI(savedRole, savedEmail);
-  } else {
-    // Show Google SSO login screen
-    state.authenticatedRole = null;
-    state.authenticatedEmail = null;
-    localStorage.removeItem('leadsync_auth_role');
-    localStorage.removeItem('leadsync_auth_email');
-    const loginSec = document.getElementById('login-section');
-    const appCont = document.getElementById('app-container');
-    if (loginSec) loginSec.style.display = 'flex';
-    if (appCont) appCont.style.display = 'none';
-  }
+  // If no valid session, display genuine Google Sign-In portal
+  state.authenticatedRole = null;
+  state.authenticatedEmail = null;
+  localStorage.removeItem('leadsync_auth_role');
+  localStorage.removeItem('leadsync_auth_email');
+
+  const loginSec = document.getElementById('login-section');
+  const appCont = document.getElementById('app-container');
+  if (loginSec) loginSec.style.display = 'flex';
+  if (appCont) appCont.style.display = 'none';
 });
 
 // --- Data Loading ---
 async function loadInitialData() {
   try {
-    const [empRes, asmRes, rolesRes, top3Res, mgrRes, matrixRes] = await Promise.all([
+    const role = state.authenticatedRole || state.currentRole || 'employee';
+    const isHr = role === 'hr';
+    const isManager = role === 'manager';
+
+    // Role-specific loading:
+    // HR only calls getTop3Results()
+    // Manager only calls getManagerResults()
+    // Employee skips both restricted endpoints
+    const [empRes, asmRes, rolesRes, matrixRes, catalogRes, top3Res, mgrRes] = await Promise.all([
       api.getEmployees(),
       api.getAssessments(),
       api.getLeadershipRoles(),
-      api.getTop3Results(),
-      api.getManagerResults(),
-      api.getSuccessionMatrix()
+      api.getSuccessionMatrix(),
+      api.getITSkillsCatalog().catch(() => null),
+      isHr ? api.getTop3Results() : Promise.resolve({ results: [] }),
+      isManager ? api.getManagerResults() : Promise.resolve({ results: [] })
     ]);
 
     state.employees = empRes.employees || [];
@@ -126,11 +204,30 @@ async function loadInitialData() {
     state.allManagerResults = mgrRes.results || [];
     state.successionMatrix = matrixRes.matrix || [];
 
+    if (catalogRes && catalogRes.categories && Object.keys(catalogRes.categories).length > 0) {
+      state.hrAI.itSkillsCatalog = catalogRes.categories;
+    }
+
+    // For employee accounts, auto-select matched employee record by email if available
+    if (role === 'employee' && state.authenticatedEmail) {
+      const matchedEmp = state.employees.find(e => 
+        e.email && e.email.toLowerCase() === state.authenticatedEmail.toLowerCase()
+      );
+      if (matchedEmp) {
+        state.activeEmployeeId = matchedEmp.id;
+        if (state.empInfo) state.empInfo.selectedEmployeeId = matchedEmp.id;
+      }
+    }
+
+    // Refresh employee-dependent header UI now that employee data is loaded
+    applyRoleSecurityAndUI(role, state.authenticatedEmail, false);
+
     // Populate dropdowns & stats
     populateEmployeeSelectors();
     renderHRStats();
     renderHRTop3Podium();
     renderHRAssessmentsList();
+    renderHREmployeeSubmittedInfoTable();
     renderManagerTable();
     renderEmployeeSelfView();
     renderSuccessionMatrix();
@@ -138,13 +235,15 @@ async function loadInitialData() {
     
     // Initial Suitability Evaluation with baseline sliders
     syncSlidersToEmployee(state.activeEmployeeId || 'EMP-001');
-    runSuitabilityEvaluation();
+    if (isHr || isManager) {
+      runSuitabilityEvaluation();
+    }
 
     // Synchronize Employee Info and AI Dossier across dashboards
     if (typeof loadEmployeeInfoData === 'function' && state.empInfo) {
       loadEmployeeInfoData(state.empInfo.selectedEmployeeId || 'EMP-001');
     }
-    if (typeof loadHRAIEmployeeDossier === 'function' && state.hrAI) {
+    if (isHr && typeof loadHRAIEmployeeDossier === 'function' && state.hrAI) {
       loadHRAIEmployeeDossier(state.hrAI.selectedEmployeeId || 'EMP-001');
     }
 
@@ -154,150 +253,222 @@ async function loadInitialData() {
   }
 }
 
-// --- Google Enterprise SSO Authentication & RBAC ---
-function openGoogleSSOModal(role) {
-  const modal = document.getElementById('modal-google-sso-auth');
-  if (!modal) {
-    console.error("modal-google-sso-auth element not found");
+// --- Google Identity Services (GIS) & Genuine Account Chooser Authentication ---
+
+function showLoginAlert(message, type = "error") {
+  const banner = document.getElementById('login-alert-banner');
+  const msgEl = document.getElementById('login-alert-message');
+  if (!banner || !msgEl) return;
+  msgEl.innerHTML = message;
+  if (type === "warning") {
+    banner.style.background = "#fffbeb";
+    banner.style.borderColor = "#fde68a";
+    banner.style.color = "#92400e";
+  } else {
+    banner.style.background = "#fef2f2";
+    banner.style.borderColor = "#fecdd3";
+    banner.style.color = "#991b1b";
+  }
+  banner.style.display = "block";
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+window.showLoginAlert = showLoginAlert;
+
+function clearLoginAlert() {
+  const banner = document.getElementById('login-alert-banner');
+  if (banner) banner.style.display = "none";
+}
+window.clearLoginAlert = clearLoginAlert;
+window.dismissLoginAlert = clearLoginAlert;
+
+async function initGoogleAuth() {
+  try {
+    const config = await api.getAuthConfig();
+    state.googleClientId = config.client_id || "";
+    state.authorizedHrEmail = config.authorized_hr || "visakans.it24@bitsathy.ac.in";
+    state.authorizedMgrEmail = config.authorized_manager || "visakan0302@gmail.com";
+
+    if (!state.googleClientId) {
+      console.warn("Google OAuth Client ID is not configured in backend environment.");
+      return;
+    }
+
+    waitForGIS(() => {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: state.googleClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false, // Ensures genuine Account Chooser is presented
+          cancel_on_tap_outside: true,
+          context: 'signin'
+        });
+
+        renderGoogleButtons();
+      } catch (gisInitErr) {
+        console.error("GIS initialization error:", gisInitErr);
+      }
+    });
+  } catch (err) {
+    console.error("Failed to load auth config:", err);
+  }
+}
+window.initGoogleAuth = initGoogleAuth;
+
+function waitForGIS(callback, attempts = 25) {
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    callback();
     return;
   }
-  const targetRoleInput = document.getElementById('google-auth-target-role');
-  const descEl = document.getElementById('google-auth-role-desc');
-  const emailInput = document.getElementById('google-auth-email-input');
-  const hintEl = document.getElementById('google-auth-hint');
-  const errorBanner = document.getElementById('google-auth-error-banner');
-
-  if (errorBanner) {
-    errorBanner.style.display = 'none';
-    errorBanner.textContent = '';
+  if (attempts <= 0) {
+    console.warn("Google Identity Services script did not load within time limit.");
+    return;
   }
-  if (targetRoleInput) targetRoleInput.value = role;
-
-  if (role === 'hr') {
-    if (descEl) descEl.textContent = 'to access HR Executive Command (Google SSO)';
-    if (emailInput) {
-      emailInput.value = 'visakans.it24@bitsathy.ac.in';
-      emailInput.placeholder = 'visakans.it24@bitsathy.ac.in';
-    }
-    if (hintEl) hintEl.innerHTML = '🔒 <strong>Authorized Account:</strong> Only <code>visakans.it24@bitsathy.ac.in</code> is permitted to log in as HR.';
-  } else if (role === 'manager') {
-    if (descEl) descEl.textContent = 'to access Engineering Manager Dashboard (Google SSO)';
-    if (emailInput) {
-      emailInput.value = 'visakan0302@gmail.com';
-      emailInput.placeholder = 'visakan0302@gmail.com';
-    }
-    if (hintEl) hintEl.innerHTML = '🔒 <strong>Authorized Account:</strong> Only <code>visakan0302@gmail.com</code> is permitted to log in as Manager.';
-  } else {
-    if (descEl) descEl.textContent = 'to access Employee Assessment Hub (Google SSO)';
-    if (emailInput) {
-      emailInput.value = 'visakan.employee@gmail.com';
-      emailInput.placeholder = 'Enter your Google email';
-    }
-    if (hintEl) hintEl.innerHTML = '✓ <strong>Open Access:</strong> Any Google account is permitted to log in to the Employee Portal.';
-  }
-
-  modal.classList.add('active');
-  modal.style.display = 'flex';
-  modal.style.opacity = '1';
-  modal.style.pointerEvents = 'auto';
-
-  if (emailInput) {
-    setTimeout(() => {
-      emailInput.focus();
-      emailInput.select();
-    }, 80);
-  }
+  setTimeout(() => waitForGIS(callback, attempts - 1), 150);
 }
-window.openGoogleSSOModal = openGoogleSSOModal;
 
-function closeGoogleSSOModal() {
-  const modal = document.getElementById('modal-google-sso-auth');
-  if (modal) {
-    modal.classList.remove('active');
-    modal.style.display = 'none';
-  }
+function renderGoogleButtons() {
+  if (!window.google || !window.google.accounts || !window.google.accounts.id) return;
+
+  const btnOptions = {
+    type: 'standard',
+    theme: 'outline',
+    size: 'large',
+    text: 'continue_with',
+    shape: 'rectangular',
+    logo_alignment: 'left',
+    width: 270
+  };
+
+  const renderCardButton = (containerId, role) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    
+    // Clear existing inner buttons and render official GIS button
+    el.innerHTML = '';
+    window.google.accounts.id.renderButton(el, btnOptions);
+
+    // Track which portal role the user intended to access
+    el.addEventListener('pointerenter', () => { state.pendingTargetRole = role; });
+    el.addEventListener('focusin', () => { state.pendingTargetRole = role; });
+    el.addEventListener('click', () => { state.pendingTargetRole = role; }, true);
+    el.addEventListener('touchstart', () => { state.pendingTargetRole = role; }, { passive: true });
+  };
+
+  renderCardButton('gis-render-hr', 'hr');
+  renderCardButton('gis-render-mgr', 'manager');
+  renderCardButton('gis-render-emp', 'employee');
 }
-window.closeGoogleSSOModal = closeGoogleSSOModal;
 
-function directGoogleLogin(role) {
-  let email = '';
-  if (role === 'hr') {
-    email = 'visakans.it24@bitsathy.ac.in';
-  } else if (role === 'manager') {
-    email = 'visakan0302@gmail.com';
-  } else if (role === 'employee') {
-    email = 'visakan.employee@gmail.com';
-  }
-  authenticateAndEnter(role, email);
-}
-window.directGoogleLogin = directGoogleLogin;
+async function initiateGoogleLogin(targetRole) {
+  state.pendingTargetRole = targetRole;
+  clearLoginAlert();
 
-function handleGoogleLogin(role) {
-  openGoogleSSOModal(role);
-}
-window.handleGoogleLogin = handleGoogleLogin;
-
-function authenticateAndEnter(role, email) {
-  closeGoogleSSOModal();
-  state.authenticatedRole = role;
-  state.authenticatedEmail = email;
-  state.currentRole = role;
-  localStorage.setItem('leadsync_auth_role', role);
-  localStorage.setItem('leadsync_auth_email', email);
-
-  const loginSec = document.getElementById('login-section');
-  const appCont = document.getElementById('app-container');
-  if (loginSec) loginSec.style.display = 'none';
-  if (appCont) appCont.style.display = 'flex';
-
-  applyRoleSecurityAndUI(role, email);
-  showToast(`Signed in successfully via Google SSO as ${email}!`, "success");
-  loadInitialData();
-}
-window.authenticateAndEnter = authenticateAndEnter;
-
-function submitGoogleSSOAuth(e) {
-  if (e) e.preventDefault();
-
-  const role = document.getElementById('google-auth-target-role').value;
-  const emailInput = document.getElementById('google-auth-email-input');
-  const email = (emailInput ? emailInput.value : '').trim().toLowerCase();
-  const errorBanner = document.getElementById('google-auth-error-banner');
-
-  // Strict email whitelist rules
-  if (role === 'hr') {
-    if (email !== 'visakans.it24@bitsathy.ac.in') {
-      if (errorBanner) {
-        errorBanner.style.display = 'block';
-        errorBanner.innerHTML = `<strong>Access Denied:</strong> For HR login, only <code>visakans.it24@bitsathy.ac.in</code> is permitted.`;
+  // If Client ID is not yet in state, perform an immediate live re-check against /api/auth/config
+  if (!state.googleClientId) {
+    try {
+      const cfg = await api.getAuthConfig();
+      if (cfg && cfg.client_id) {
+        state.googleClientId = cfg.client_id.trim();
+        await initGoogleAuth();
       }
-      return;
-    }
-  } else if (role === 'manager') {
-    if (email !== 'visakan0302@gmail.com') {
-      if (errorBanner) {
-        errorBanner.style.display = 'block';
-        errorBanner.innerHTML = `<strong>Access Denied:</strong> For Manager login, only <code>visakan0302@gmail.com</code> is permitted.`;
-      }
-      return;
-    }
-  } else if (role === 'employee') {
-    if (!email || !email.includes('@') || !email.includes('.')) {
-      if (errorBanner) {
-        errorBanner.style.display = 'block';
-        errorBanner.innerHTML = `Please enter a valid Google email address.`;
-      }
-      return;
-    }
+    } catch (_) {}
   }
 
-  authenticateAndEnter(role, email);
-}
-window.submitGoogleSSOAuth = submitGoogleSSOAuth;
+  if (!state.googleClientId) {
+    showLoginAlert(
+      `<strong>Google OAuth Client ID Not Configured:</strong><br>` +
+      `Please set <code>GOOGLE_CLIENT_ID</code> in your backend <code>.env</code> file (or Render dashboard) to activate genuine Google Sign-In.<br>` +
+      `<small style="color: #64748b;">Once set, refresh the page to authenticate via Google Account Chooser.</small>`,
+      "warning"
+    );
+    return;
+  }
 
-function handleLogout() {
+  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+    showLoginAlert("Google Identity Services library is loading. Please check your network and try again.", "error");
+    return;
+  }
+
+  // Trigger Google's genuine Account Chooser prompt
+  try {
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed()) {
+        console.log("GIS prompt not displayed:", notification.getNotDisplayedReason());
+      } else if (notification.isSkippedMoment()) {
+        console.log("GIS prompt skipped:", notification.getSkippedReason());
+      }
+    });
+  } catch (err) {
+    console.error("Error triggering GIS prompt:", err);
+  }
+}
+window.initiateGoogleLogin = initiateGoogleLogin;
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response || !response.credential) {
+    showLoginAlert("No Google credential token received from Google. Please try again.", "error");
+    return;
+  }
+
+  const targetRole = state.pendingTargetRole || 'employee';
+  clearLoginAlert();
+
+  try {
+    showToast("Verifying Google ID token with LeadSync security...", "info");
+    const result = await api.verifyGoogleToken(response.credential, targetRole);
+
+    const user = result?.user || (result?.email ? {
+      role: result.role,
+      email: result.email,
+      name: result.name,
+      picture: result.picture || ''
+    } : null);
+
+    if (result && (result.success || result.authenticated) && user) {
+      state.authenticatedRole = user.role;
+      state.authenticatedEmail = user.email;
+      state.authenticatedName = user.name;
+      state.authenticatedPicture = user.picture || '';
+      state.currentRole = user.role;
+
+      const loginSec = document.getElementById('login-section');
+      const appCont = document.getElementById('app-container');
+      if (loginSec) loginSec.style.display = 'none';
+      if (appCont) appCont.style.display = 'flex';
+
+      applyRoleSecurityAndUI(user.role, user.email);
+      showToast(`Signed in successfully via Google as ${user.name}!`, "success");
+      await loadInitialData();
+    } else {
+      throw new Error("Verification succeeded but no user data returned.");
+    }
+  } catch (err) {
+    console.error("Google authentication error:", err);
+    const errMsg = err.message || "Authentication failed. Access denied.";
+    showLoginAlert(errMsg, "error");
+    showToast(errMsg, "error");
+  }
+}
+window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+
+async function handleLogout() {
+  try {
+    await api.logout();
+  } catch (e) {
+    console.warn("Logout API call error:", e);
+  }
+
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    try {
+      // Disables auto-selection so genuine Account Chooser opens on next login
+      window.google.accounts.id.disableAutoSelect();
+    } catch (_) {}
+  }
+
   state.authenticatedRole = null;
   state.authenticatedEmail = null;
+  state.authenticatedName = null;
+  state.authenticatedPicture = null;
   localStorage.removeItem('leadsync_auth_role');
   localStorage.removeItem('leadsync_auth_email');
 
@@ -306,11 +477,12 @@ function handleLogout() {
   if (loginSec) loginSec.style.display = 'flex';
   if (appCont) appCont.style.display = 'none';
 
-  showToast("Logged out successfully from session.", "info");
+  clearLoginAlert();
+  showToast("Logged out successfully. Application session terminated.", "info");
 }
 window.handleLogout = handleLogout;
 
-function applyRoleSecurityAndUI(role, authEmail = null) {
+function applyRoleSecurityAndUI(role, authEmail = null, navigate = true) {
   state.currentRole = role;
   state.authenticatedRole = role;
   const email = authEmail || state.authenticatedEmail || (role === 'hr' ? 'visakans.it24@bitsathy.ac.in' : (role === 'manager' ? 'visakan0302@gmail.com' : 'alex.rivera@leadsync.io'));
@@ -328,6 +500,7 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
   const navAiDirect = document.getElementById('nav-item-ai-analyzer-direct');
   const navManager = document.getElementById('nav-item-manager');
   const navEmp = document.getElementById('nav-item-employee');
+  const navSuccession = document.getElementById('nav-item-succession');
   const navAiAssistant = document.getElementById('nav-item-ai-assistant');
 
   // Succession navigation section
@@ -341,63 +514,65 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
 
   if (role === 'hr') {
     if (authBadge) {
-      authBadge.textContent = `● HR: ${email}`;
+      authBadge.textContent = `● HR Executive Portal: ${email}`;
       authBadge.style.background = '#4f46e5';
     }
     if (avatar) {
       avatar.textContent = 'VS';
       avatar.style.background = '#4f46e5';
     }
-    if (name) name.textContent = 'Visakan S';
+    if (name) name.textContent = state.authenticatedName || 'Visakan S';
     if (roleText) roleText.textContent = `${email} • HR Talent Director`;
     if (empSelectWrapper) empSelectWrapper.style.display = 'none';
 
-    // Show HR-only nav items: AI analyzer, employee info, suitability, succession roles, hr dashboard
+    // HR Dashboard only (Separated dashboards)
     if (navHr) navHr.style.display = 'block';
-    if (navEmpInfo) navEmpInfo.style.display = 'block';
+    if (navEmpInfo) navEmpInfo.style.display = 'none';
     if (navAiDirect) navAiDirect.style.display = 'block';
     if (navAiAssistant) navAiAssistant.style.display = 'block';
-    if (navManager) navManager.style.display = 'none';
-    if (navEmp) navEmp.style.display = 'none';
+    if (navManager) navManager.style.display = 'none'; // Separated!
+    if (navEmp) navEmp.style.display = 'none'; // Separated!
+    if (navSuccession) navSuccession.style.display = 'block';
 
     if (successionTitle) successionTitle.style.display = 'block';
     if (successionList) successionList.style.display = 'block';
 
     hrActions.forEach(el => el.style.display = 'inline-flex');
 
-    navigateToTab('tab-hr');
+    if (navigate) navigateToTab('tab-hr');
 
   } else if (role === 'manager') {
     if (authBadge) {
-      authBadge.textContent = `● Manager: ${email}`;
+      authBadge.textContent = `● Manager Assessment Portal: ${email}`;
       authBadge.style.background = '#0284c7';
     }
     if (avatar) {
       avatar.textContent = 'V';
       avatar.style.background = '#0284c7';
     }
-    if (name) name.textContent = 'Visakan';
+    if (name) name.textContent = state.authenticatedName || 'Visakan';
     if (roleText) roleText.textContent = `${email} • Engineering Director`;
     if (empSelectWrapper) empSelectWrapper.style.display = 'none';
 
-    // Show Manager only
+    // Manager Dashboard only (Separated dashboards)
     if (navHr) navHr.style.display = 'none';
     if (navEmpInfo) navEmpInfo.style.display = 'none';
     if (navAiDirect) navAiDirect.style.display = 'none';
     if (navAiAssistant) navAiAssistant.style.display = 'block';
     if (navManager) navManager.style.display = 'block';
     if (navEmp) navEmp.style.display = 'none';
+    if (navSuccession) navSuccession.style.display = 'none';
 
     if (successionTitle) successionTitle.style.display = 'none';
     if (successionList) successionList.style.display = 'none';
 
     hrActions.forEach(el => el.style.display = 'none');
 
-    navigateToTab('tab-manager');
+    if (navigate) navigateToTab('tab-manager');
 
   } else if (role === 'employee') {
     if (authBadge) {
-      authBadge.textContent = `● Employee: ${email}`;
+      authBadge.textContent = `● Employee Assessment Hub: ${email}`;
       authBadge.style.background = '#059669';
     }
     const emp = getActiveEmployee();
@@ -405,24 +580,25 @@ function applyRoleSecurityAndUI(role, authEmail = null) {
       avatar.textContent = emp?.avatar || 'EM';
       avatar.style.background = '#059669';
     }
-    if (name) name.textContent = emp?.name || email.split('@')[0];
+    if (name) name.textContent = state.authenticatedName || emp?.name || email.split('@')[0];
     if (roleText) roleText.textContent = `${email} • Employee Portal`;
     if (empSelectWrapper) empSelectWrapper.style.display = 'flex';
 
-    // Show Employee only
+    // Employee Dashboard only (Separated dashboards)
     if (navHr) navHr.style.display = 'none';
     if (navEmpInfo) navEmpInfo.style.display = 'none';
     if (navAiDirect) navAiDirect.style.display = 'none';
     if (navAiAssistant) navAiAssistant.style.display = 'none';
     if (navManager) navManager.style.display = 'none';
     if (navEmp) navEmp.style.display = 'block';
+    if (navSuccession) navSuccession.style.display = 'none';
 
     if (successionTitle) successionTitle.style.display = 'none';
     if (successionList) successionList.style.display = 'none';
 
     hrActions.forEach(el => el.style.display = 'none');
 
-    navigateToTab('tab-employee');
+    if (navigate) navigateToTab('tab-employee');
   }
 }
 window.applyRoleSecurityAndUI = applyRoleSecurityAndUI;
@@ -433,23 +609,38 @@ function setupRoleSwitcher() {
   const selectActive = document.getElementById('select-active-employee');
   if (selectActive) {
     selectActive.addEventListener('change', (e) => {
-      state.activeEmployeeId = e.target.value;
+      const empId = e.target.value;
+      state.activeEmployeeId = empId;
+      state.empInfo.selectedEmployeeId = empId;
       updateUserPill();
       renderEmployeeSelfView();
-      // also sync employee tab select
       const empTabSelect = document.getElementById('emp-tab-user-select');
-      if (empTabSelect) empTabSelect.value = e.target.value;
+      if (empTabSelect) empTabSelect.value = empId;
+      const empInfoSelect = document.getElementById('emp-info-select');
+      if (empInfoSelect) empInfoSelect.value = empId;
+      if (typeof loadEmployeeInfoData === 'function') {
+        loadEmployeeInfoData(empId);
+      }
       showToast(`Switched active view to ${getActiveEmployee()?.name}`);
     });
   }
 
+  // Employee Dashboard active employee selector
   const empTabSelect = document.getElementById('emp-tab-user-select');
   if (empTabSelect) {
     empTabSelect.addEventListener('change', (e) => {
-      state.activeEmployeeId = e.target.value;
-      if (selectActive) selectActive.value = e.target.value;
+      const empId = e.target.value;
+      state.activeEmployeeId = empId;
+      state.empInfo.selectedEmployeeId = empId;
+      if (selectActive) selectActive.value = empId;
+      const empInfoSelect = document.getElementById('emp-info-select');
+      if (empInfoSelect) empInfoSelect.value = empId;
       updateUserPill();
       renderEmployeeSelfView();
+      if (typeof loadEmployeeInfoData === 'function') {
+        loadEmployeeInfoData(empId);
+      }
+      showToast(`Viewing & Editing Profile: ${getActiveEmployee()?.name}`);
     });
   }
 }
@@ -521,12 +712,13 @@ function initEventListeners() {
   const btnHrLaunchAI = document.getElementById('btn-hr-launch-ai');
   if (btnHrLaunchAI) {
     btnHrLaunchAI.addEventListener('click', () => {
-      const quickRoleId = document.getElementById('hr-quick-role-select').value;
-      document.getElementById('ai-select-preset-role').value = quickRoleId;
-      setAIMatcherMode('preset');
-      updateAIPresetSummary(quickRoleId);
-      navigateToTab('tab-ai-matcher');
-      runAIMatching();
+      const quickRoleId = document.getElementById('hr-quick-role-select')?.value || 'ROLE-SSE';
+      state.hrAI.targetRoleId = quickRoleId;
+      const roleSelect = document.getElementById('hr-ai-target-role');
+      if (roleSelect) roleSelect.value = quickRoleId;
+      navigateToTab('tab-hr');
+      document.getElementById('hr-ai-analyzer-module')?.scrollIntoView({ behavior: 'smooth' });
+      executeHRAIEligibilityAnalysis(false);
     });
   }
 
@@ -586,36 +778,26 @@ function initEventListeners() {
     btnResetAsm.addEventListener('click', handleResetAssessmentSection);
   }
 
-  // Google SSO Login Portal card buttons
+  // Google Identity Services (GIS) Login Portal card buttons
   const btnLoginHr = document.getElementById('btn-login-sso-hr');
   if (btnLoginHr) {
     btnLoginHr.addEventListener('click', (e) => {
       e.preventDefault();
-      openGoogleSSOModal('hr');
+      initiateGoogleLogin('hr');
     });
   }
   const btnLoginMgr = document.getElementById('btn-login-sso-mgr');
   if (btnLoginMgr) {
     btnLoginMgr.addEventListener('click', (e) => {
       e.preventDefault();
-      openGoogleSSOModal('manager');
+      initiateGoogleLogin('manager');
     });
   }
   const btnLoginEmp = document.getElementById('btn-login-sso-emp');
   if (btnLoginEmp) {
     btnLoginEmp.addEventListener('click', (e) => {
       e.preventDefault();
-      openGoogleSSOModal('employee');
-    });
-  }
-
-  // Click outside to close Google SSO Modal
-  const modalSSO = document.getElementById('modal-google-sso-auth');
-  if (modalSSO) {
-    modalSSO.addEventListener('click', (e) => {
-      if (e.target === modalSSO) {
-        closeGoogleSSOModal();
-      }
+      initiateGoogleLogin('employee');
     });
   }
 
@@ -654,21 +836,21 @@ function initEventListeners() {
 function mountAIAnalyzer(tabId) {
   const moduleEl = document.getElementById('hr-ai-analyzer-module');
   if (!moduleEl) return;
-  if (tabId === 'tab-ai-matcher') {
-    const aiMount = document.getElementById('ai-role-analyzer-mount-point');
-    if (aiMount && moduleEl.parentElement !== aiMount) {
-      aiMount.appendChild(moduleEl);
-    }
-  } else if (tabId === 'tab-hr') {
-    const hrMount = document.getElementById('hr-ai-analyzer-mount-point');
-    if (hrMount && moduleEl.parentElement !== hrMount) {
-      hrMount.appendChild(moduleEl);
-    }
+  const hrMount = document.getElementById('hr-ai-analyzer-mount-point');
+  if (hrMount && moduleEl.parentElement !== hrMount) {
+    hrMount.appendChild(moduleEl);
   }
 }
 window.mountAIAnalyzer = mountAIAnalyzer;
 
 function navigateToTab(tabId) {
+  // Gracefully remap legacy or consolidated tab requests
+  if (tabId === 'tab-employee-info') {
+    tabId = 'tab-employee';
+  } else if (tabId === 'tab-ai-matcher' || tabId === 'tab-suitability') {
+    tabId = 'tab-hr';
+  }
+
   // Enforce role security guard
   const userRole = state.authenticatedRole || 'hr';
   if (userRole === 'manager' && tabId !== 'tab-manager' && tabId !== 'tab-ai-chat') {
@@ -676,7 +858,7 @@ function navigateToTab(tabId) {
   } else if (userRole === 'employee' && tabId !== 'tab-employee') {
     tabId = 'tab-employee';
   } else if (userRole === 'hr') {
-    const hrAllowed = ['tab-hr', 'tab-employee-info', 'tab-ai-matcher', 'tab-suitability', 'tab-succession', 'tab-ai-chat'];
+    const hrAllowed = ['tab-hr', 'tab-succession', 'tab-ai-chat'];
     if (!hrAllowed.includes(tabId)) {
       tabId = 'tab-hr';
     }
@@ -693,7 +875,7 @@ function navigateToTab(tabId) {
     activePane.classList.add('active');
   }
 
-  // Mount AI Analyzer into the active tab (AI Role Analyzer or HR Dashboard)
+  // Mount AI Analyzer into HR Dashboard
   mountAIAnalyzer(tabId);
 
   document.querySelectorAll('.nav-link-btn').forEach(btn => {
@@ -701,15 +883,16 @@ function navigateToTab(tabId) {
   });
 
   // Refresh view contents if needed
-  if (tabId === 'tab-suitability') {
-    runSuitabilityEvaluation();
-  } else if (tabId === 'tab-ai-matcher') {
-    const currentAIId = document.getElementById('hr-ai-select-employee')?.value || state.hrAI.selectedEmployeeId;
-    loadHRAIEmployeeDossier(currentAIId).then(() => {
-      executeHRAIEligibilityAnalysis(false);
-    });
-  } else if (tabId === 'tab-employee-info') {
-    initEmployeeInfoTab();
+  if (tabId === 'tab-hr') {
+    renderHREmployeeSubmittedInfoTable();
+  } else if (tabId === 'tab-employee') {
+    const curEmpId = state.activeEmployeeId || state.empInfo.selectedEmployeeId || 'EMP-001';
+    state.activeEmployeeId = curEmpId;
+    state.empInfo.selectedEmployeeId = curEmpId;
+    renderEmployeeSelfView();
+    if (typeof loadEmployeeInfoData === 'function') {
+      loadEmployeeInfoData(curEmpId);
+    }
   } else if (tabId === 'tab-ai-chat') {
     if (window.api && window.api.getAIMetricsSummary && window.aiAssistant) {
       window.api.getAIMetricsSummary().then(res => {
@@ -858,17 +1041,35 @@ function renderHRAssessmentsList() {
     return;
   }
 
-  container.innerHTML = state.assessments.map(asm => `
+  container.innerHTML = state.assessments.map(asm => {
+    const assignedIds = Array.isArray(asm.assigned_to) ? asm.assigned_to : [];
+    const isAll = !assignedIds.length || assignedIds.includes("all") || assignedIds.length >= (state.employees || []).length;
+    let assignedText = '';
+    if (isAll) {
+      assignedText = `All ${(state.employees || []).length} Employees`;
+    } else {
+      const names = assignedIds.map(id => {
+        const e = (state.employees || []).find(emp => emp.id === id);
+        return e ? e.name : id;
+      });
+      if (names.length <= 3) {
+        assignedText = `${names.length} Candidate${names.length > 1 ? 's' : ''}: ${names.join(', ')}`;
+      } else {
+        assignedText = `${names.length} Candidates (${names.slice(0, 2).join(', ')} +${names.length - 2} more)`;
+      }
+    }
+
+    return `
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 12px; flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow-sm);">
       <div>
         <div style="font-weight: 700; color: #0f172a; font-size: 0.98rem;">${asm.title}</div>
         <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
           ${asm.description || '20 Questions across Python, C, Java, DBMS, Technical, Communication, and Aptitude.'}
         </div>
-        <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">
+        <div style="display: flex; gap: 14px; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); flex-wrap: wrap;">
           <span>📅 ${asm.scheduled_date} at ${asm.scheduled_time}</span>
           <span>⏱ ${asm.duration_minutes} Minutes</span>
-          <span>👥 Assigned to: <strong>All ${state.employees.length} Employees</strong></span>
+          <span>👥 Assigned to: <strong style="color: #4338ca;">${assignedText}</strong></span>
           <span style="color: #059669; font-weight: 600;">● ${asm.status}</span>
         </div>
       </div>
@@ -878,8 +1079,158 @@ function renderHRAssessmentsList() {
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
+
+// --- HR Dashboard: All Employees Submitted Information & Credentials Table ---
+function renderHREmployeeSubmittedInfoTable() {
+  const tbody = document.getElementById('hr-employee-submitted-info-tbody');
+  if (!tbody) return;
+
+  const emps = state.employees || [];
+  if (emps.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #64748b; padding: 24px; font-weight: 500;">No employee records available.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = emps.map(emp => {
+    // 1. Experience
+    const exp = (emp.experience_years !== undefined && emp.experience_years !== null) 
+      ? parseFloat(emp.experience_years) 
+      : 0.0;
+
+    // 2. Assessment score
+    const asm = emp.assessment_scores || {};
+    const asmCompleted = Boolean(asm && asm.completed === true && (asm.score_pct > 0 || asm.correct_count > 0));
+    const asmScore = asmCompleted ? (parseInt(asm.score_pct) || 0) : 0;
+    const correctCount = asmCompleted ? (asm.correct_count !== undefined ? parseInt(asm.correct_count) : Math.round((asmScore / 100) * 20)) : 0;
+    const asmBadge = asmCompleted 
+      ? `<span class="badge-tag" style="background: #ecfdf5; color: #059669; font-weight: 700; border: 1px solid #a7f3d0;">✓ ${asmScore}% (${correctCount}/20 Q)</span>`
+      : `<span class="badge-tag" style="background: #fef3c7; color: #b45309; font-weight: 700; border: 1px solid #fde68a;">⏳ Pending Test (0%)</span>`;
+
+    // 3. Skills Known
+    const skillsList = emp.skills ? Object.keys(emp.skills) : [];
+    const skillsCount = skillsList.length;
+    let skillsHtml = '';
+    if (skillsCount === 0) {
+      skillsHtml = `<span style="color: #94a3b8; font-size: 0.76rem;">No skills selected</span>`;
+    } else {
+      const topSkills = skillsList.slice(0, 3).map(s => 
+        `<span style="background: #eef2ff; color: #4338ca; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">${s}</span>`
+      ).join(' ');
+      const moreCount = skillsCount > 3 ? `<span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">+${skillsCount - 3} more</span>` : '';
+      skillsHtml = `<div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">${topSkills} ${moreCount}</div>`;
+    }
+
+    // 4. Certificates with Authenticity Detector Status
+    const certs = Array.isArray(emp.certifications) ? emp.certifications : [];
+    let certBadgeHtml = '';
+    const hasFake = certs.some(c => c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake')));
+    const authenticCount = certs.filter(c => c.is_authentic !== false && c.verdict !== 'FAKE CERTIFICATE' && (!c.status || !c.status.toLowerCase().includes('fake'))).length;
+
+    if (hasFake) {
+      certBadgeHtml = `<span class="badge-tag" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800; font-size: 0.74rem;">⛔ Fake Certificate Detected</span>`;
+    } else if (authenticCount > 0) {
+      certBadgeHtml = `<span class="badge-tag" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-weight: 700; font-size: 0.74rem;">✓ Authentic (${authenticCount})</span>`;
+    } else {
+      certBadgeHtml = `<span class="badge-tag" style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.74rem;">Pending Upload</span>`;
+    }
+
+    // 5. Resume
+    const hasResume = Boolean(emp.resume && (emp.resume.image_url || emp.resume.filename || emp.resume.display_name));
+    const resumeBadge = hasResume
+      ? `<span class="badge-tag" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700; font-size: 0.74rem;">📄 ${emp.resume.display_name || emp.resume.filename || 'Uploaded'}</span>`
+      : `<span style="color: #94a3b8; font-size: 0.76rem;">No Resume</span>`;
+
+    // 6. Assigned Role
+    const assignedRoleHtml = emp.appointed_role
+      ? `<span class="badge-tag" style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 800; font-size: 0.76rem;">👑 ${emp.appointed_role}</span>`
+      : `<span style="color: #94a3b8; font-size: 0.76rem;">Not Assigned</span>`;
+
+    return `
+      <tr onclick="showEmployeeFullDossierInHR('${emp.id}')" style="border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s ease;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'" title="Click to view ${emp.name}'s complete submitted credentials in HR analyzer">
+        <td style="padding: 12px 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #06b6d4); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.92rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);">
+              ${emp.avatar || emp.name.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 0.92rem;">${emp.name}</div>
+              <div style="font-size: 0.75rem; color: #64748b;">${emp.role} &bull; ${emp.department}</div>
+            </div>
+          </div>
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          <span style="font-weight: 800; font-size: 0.95rem; color: #0284c7;">${exp} Yrs</span>
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          ${asmBadge}
+        </td>
+        <td style="padding: 12px 14px;">
+          ${skillsHtml}
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          ${certBadgeHtml}
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          ${resumeBadge}
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          ${assignedRoleHtml}
+        </td>
+        <td style="padding: 12px 14px; text-align: center;">
+          <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProfileModal('${emp.id}')" style="font-weight: 700; padding: 6px 10px; font-size: 0.74rem;" title="View all credentials submitted by this employee">
+              👁 View Dossier
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); selectAndAnalyzeCandidateInAI('${emp.id}')" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); color: white; border: none; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25); font-size: 0.74rem;">
+              ⚡ Analyse in AI
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openCreateAssessmentModalForEmployee('${emp.id}')" style="font-weight: 700; padding: 6px 10px; font-size: 0.74rem; color: #4338ca; border-color: #c7d2fe; background: #eef2ff;" title="Assign assessment separately to ${emp.name}">
+              📝 Assign Test
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderHREmployeeSubmittedInfoTable = renderHREmployeeSubmittedInfoTable;
+
+async function showEmployeeFullDossierInHR(empId) {
+  state.hrAI.selectedEmployeeId = empId;
+  const select = document.getElementById('hr-ai-select-employee');
+  if (select) {
+    select.value = empId;
+  }
+  const emp = (state.employees || []).find(e => e.id === empId);
+  const eligibleRoleId = getEligibleRoleForEmployee(emp);
+  state.hrAI.targetRoleId = eligibleRoleId;
+  const roleSelect = document.getElementById('hr-ai-target-role');
+  if (roleSelect) {
+    roleSelect.value = eligibleRoleId;
+  }
+  updateHRAITargetRoleBenchmarks();
+
+  navigateToTab('tab-hr');
+  const moduleEl = document.getElementById('hr-ai-analyzer-module');
+  if (moduleEl) {
+    moduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  showToast(`Loaded ${emp?.name || empId}'s complete credentials for HR inspection`, "info");
+  await loadHRAIEmployeeDossier(empId);
+}
+window.showEmployeeFullDossierInHR = showEmployeeFullDossierInHR;
+
+async function selectAndAnalyzeCandidateInAI(empId) {
+  await showEmployeeFullDossierInHR(empId);
+  setTimeout(() => {
+    executeHRAIEligibilityAnalysis(false);
+  }, 350);
+}
+window.selectAndAnalyzeCandidateInAI = selectAndAnalyzeCandidateInAI;
 
 // --- Manager View Rendering (ALL 15 EMPLOYEES) ---
 function renderManagerTable() {
@@ -1124,21 +1475,16 @@ window.handleManagerSaveEmployee = handleManagerSaveEmployee;
 
 // --- Top 3 Candidates Direct AI Evaluation for Selected Leadership Role ---
 function startTop3RoleAnalysisUI() {
-  navigateToTab('tab-ai-matcher');
-
-  // Populate role select if empty
-  const roleSelect = document.getElementById('top3-target-role-select');
-  if (roleSelect && state.leadershipRoles.length > 0) {
-    roleSelect.innerHTML = state.leadershipRoles.map(r => 
-      `<option value="${r.id}">${r.title} (${r.department}) - Min Exp: ${r.experience_years} yrs</option>`
-    ).join('');
+  navigateToTab('tab-hr');
+  const moduleEl = document.getElementById('hr-ai-analyzer-module');
+  if (moduleEl) {
+    moduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-
-  updateTop3RolePreview();
-
-  const panel = document.getElementById('ai-top3-evaluation-panel');
-  if (panel) {
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const top1 = (state.top3Results && state.top3Results.length > 0) ? state.top3Results[0] : null;
+  if (top1 && top1.employee_id) {
+    selectAndAnalyzeCandidateInAI(top1.employee_id);
+  } else {
+    executeHRAIEligibilityAnalysis(false);
   }
 }
 window.startTop3RoleAnalysisUI = startTop3RoleAnalysisUI;
@@ -1249,7 +1595,7 @@ function renderTop3DecisionOutput(result) {
     const skillsScore = dims.skills_alignment ?? 80;
     const expScore = dims.resume_experience_fit ?? 80;
     const certScore = dims.certifications_match ?? 75;
-    const asmScore = dims.assessment_marks_fit ?? 80;
+    const asmScore = dims.assessment_marks_fit ?? 0;
 
     return `
       <tr style="${isWinner ? 'background: #f0fdf4; font-weight: 600;' : ''}">
@@ -1328,9 +1674,9 @@ function renderTop3DecisionOutput(result) {
 
         <div style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius-md); padding: 12px;">
           <div style="font-size: 0.72rem; color: #86efac; font-weight: 700; text-transform: uppercase;">📄 Resume & Assessment</div>
-          <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;">${winner.dimension_scores?.assessment_marks_fit ?? 85}%</div>
+          <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;">${winner.dimension_scores?.assessment_marks_fit ?? 0}%</div>
           <div style="font-size: 0.72rem; color: #e2e8f0; margin-top: 2px;">
-            Score: ${winner.assessment_details?.score_pct ?? 85}% (${winner.assessment_details?.correct_count ?? 17}/20 Correct)
+            Score: ${winner.assessment_details?.score_pct ?? 0}% (${winner.assessment_details?.correct_count ?? 0}/20 Correct)
           </div>
         </div>
       </div>
@@ -1491,31 +1837,62 @@ function renderEmployeeSelfView() {
 
         <!-- Existing Skills Matrix -->
         <div style="margin-top: 24px;">
-          <h3 style="font-size: 1.05rem; margin-bottom: 12px;">Existing Core Technical & Leadership Skills</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-            ${Object.entries(skills).map(([skill, val]) => `
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 3px;">
-                  <span style="color: var(--text-secondary);">${skill}</span>
-                  <strong style="color: var(--text-light);">${val}%</strong>
-                </div>
-                <div class="progress-track">
-                  <div class="progress-fill ${val >= 80 ? 'green' : (val >= 65 ? 'cyan' : 'amber')}" style="width: ${val}%;"></div>
-                </div>
-              </div>
-            `).join('')}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>⚡ Core Computer &amp; IT Skills Known</span>
+              <span class="badge-tag" style="background: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 0.74rem;">${Object.keys(skills).length} Skills</span>
+            </h3>
+            <button type="button" class="btn btn-secondary btn-xs" onclick="document.getElementById('emp-info-skills-cloud')?.scrollIntoView({behavior: 'smooth'})" style="color: #0284c7; font-weight: 700;">
+              ✏️ Select / Edit Skills in Section 4 ↑
+            </button>
           </div>
+          ${Object.entries(skills).length === 0 ? `
+            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 16px 20px; color: #64748b; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.3rem;">💡</span>
+                <span>No computer/IT skills registered yet. Select the skills you know in <strong>"4. Computer &amp; IT-Related Skills Known"</strong> above and click <strong>"Save &amp; Update HR Dashboard"</strong>.</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="document.getElementById('emp-info-skills-cloud')?.scrollIntoView({behavior: 'smooth'})" style="color: #0284c7; font-weight: 700;">
+                Select Skills Now ↑
+              </button>
+            </div>
+          ` : `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+              ${Object.entries(skills).map(([skill, val]) => `
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 4px;">
+                    <span style="color: #1e293b; font-weight: 700;">${skill}</span>
+                    <strong style="color: #0284c7;">${val}%</strong>
+                  </div>
+                  <div class="progress-track" style="height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+                    <div class="progress-fill" style="width: ${val}%; height: 100%; background: ${val >= 80 ? '#10b981' : (val >= 65 ? '#0284c7' : '#f59e0b')}; border-radius: 9999px;"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
         </div>
 
         <!-- Certifications -->
         <div style="margin-top: 20px;">
-          <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Verified Professional Certifications</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); margin: 0;">Verified Professional Certifications</h4>
+            <button type="button" class="btn btn-secondary btn-xs" onclick="document.getElementById('emp-info-certs-gallery')?.scrollIntoView({behavior: 'smooth'})" style="color: #0284c7; font-size: 0.7rem; font-weight: 700;">
+              + Add Certs in Section 5 ↑
+            </button>
+          </div>
           <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${certs.map(c => `
-              <span class="status-pill status-cyan" style="font-size: 0.75rem;">
-                ✓ ${c}
-              </span>
-            `).join('')}
+            ${certs.length === 0 ? `
+              <span style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">No verified certificates attached yet. Upload authentic certificate credentials in Section 5 above.</span>
+            ` : certs.map(c => {
+              const certTitle = typeof c === 'object' ? (c.title || c.name || 'Professional Certification') : c;
+              const isFake = typeof c === 'object' && (c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE');
+              return `
+                <span class="status-pill ${isFake ? 'status-amber' : 'status-cyan'}" style="font-size: 0.75rem; font-weight: 700;">
+                  ${isFake ? '⚠️' : '✓'} ${certTitle}
+                </span>
+              `;
+            }).join('')}
           </div>
         </div>
       </div>
@@ -1551,29 +1928,64 @@ function renderEmployeeSelfView() {
       `;
     }
   } else {
-    const activeAsm = state.assessments[0];
-    state.activeAssessmentId = activeAsm.id;
-    if (calloutBadge) {
-      calloutBadge.textContent = "Assigned Assessment";
-      calloutBadge.style.background = "var(--accent-primary)";
-    }
-    if (calloutTitle) calloutTitle.textContent = activeAsm.title;
-    if (calloutDesc) calloutDesc.textContent = activeAsm.description || "20 questions covering technical and leadership readiness.";
-    if (calloutMeta) {
-      calloutMeta.innerHTML = `
-        <span>⏱ Duration: <strong>${activeAsm.duration_minutes || 30} mins</strong></span>
-        <span>📅 Format: <strong>20 Multiple Choice Questions</strong></span>
-      `;
-    }
-    if (btnTakeAsm) {
-      btnTakeAsm.disabled = false;
-      btnTakeAsm.className = "btn btn-emerald";
-      btnTakeAsm.style.opacity = "1";
-      btnTakeAsm.style.cursor = "pointer";
-      btnTakeAsm.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Take Assessment Now
-      `;
+    // Find assessment assigned specifically to this employee
+    const assignedAsm = state.assessments.find(asm => {
+      const assigned = Array.isArray(asm.assigned_to) ? asm.assigned_to : [];
+      if (!assigned.length || assigned.includes("all")) return true;
+      return assigned.includes(emp.id);
+    });
+
+    if (assignedAsm) {
+      state.activeAssessmentId = assignedAsm.id;
+      if (calloutBadge) {
+        calloutBadge.textContent = "Assigned Assessment";
+        calloutBadge.style.background = "var(--accent-primary)";
+      }
+      if (calloutTitle) calloutTitle.textContent = assignedAsm.title;
+      if (calloutDesc) calloutDesc.textContent = assignedAsm.description || "20 questions covering technical and leadership readiness.";
+      if (calloutMeta) {
+        calloutMeta.innerHTML = `
+          <span>⏱ Duration: <strong>${assignedAsm.duration_minutes || 30} mins</strong></span>
+          <span>📅 Format: <strong>20 Multiple Choice Questions</strong></span>
+          <span style="color: #059669; font-weight: 700;">✓ Assigned to You by HR</span>
+        `;
+      }
+      if (btnTakeAsm) {
+        btnTakeAsm.disabled = false;
+        btnTakeAsm.className = "btn btn-emerald";
+        btnTakeAsm.style.opacity = "1";
+        btnTakeAsm.style.cursor = "pointer";
+        btnTakeAsm.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Take Assessment Now
+        `;
+      }
+    } else {
+      // Assessment exists in LeadSync, but not assigned to this employee
+      const firstAsm = state.assessments[0];
+      state.activeAssessmentId = null;
+      if (calloutBadge) {
+        calloutBadge.textContent = "Not Assigned to You";
+        calloutBadge.style.background = "#64748b";
+      }
+      if (calloutTitle) calloutTitle.textContent = "Assessment Not Assigned to Your Profile";
+      if (calloutDesc) calloutDesc.textContent = `HR scheduled "${firstAsm.title}", but assigned it separately to top candidates based on Skills, Resume, and Certifications. Your profile is not currently assigned.`;
+      if (calloutMeta) {
+        calloutMeta.innerHTML = `
+          <span>🔒 Status: <strong>Selective Assessment Assignment</strong></span>
+          <span style="color: #64748b;">(Assigned to Top 3 candidates by Skills, Resume & Certs)</span>
+        `;
+      }
+      if (btnTakeAsm) {
+        btnTakeAsm.disabled = true;
+        btnTakeAsm.className = "btn btn-secondary";
+        btnTakeAsm.style.opacity = "0.6";
+        btnTakeAsm.style.cursor = "not-allowed";
+        btnTakeAsm.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Not Assigned to You
+        `;
+      }
     }
   }
 }
@@ -1707,7 +2119,7 @@ async function runSuitabilityEvaluation() {
     const dims = evalData.dimension_scores || {};
     document.getElementById('dim-skills-score').textContent = `${dims.skills_match || 80}%`;
     document.getElementById('dim-project-score').textContent = `${dims.project_relevance || 75}%`;
-    document.getElementById('dim-asm-score').textContent = `${dims.assessment_score || 85}%`;
+    document.getElementById('dim-asm-score').textContent = `${dims.assessment_score ?? 0}%`;
     document.getElementById('dim-exp-score').textContent = `${dims.experience_fit || 80}%`;
 
     // AI Narrative
@@ -1737,11 +2149,7 @@ async function runSuitabilityEvaluation() {
 }
 
 function inspectEmployeeInSuitability(empId) {
-  state.activeEmployeeId = empId;
-  document.getElementById('suit-select-employee').value = empId;
-  syncSlidersToEmployee(empId);
-  navigateToTab('tab-suitability');
-  runSuitabilityEvaluation();
+  selectAndAnalyzeCandidateInAI(empId);
 }
 
 window.inspectEmployeeInSuitability = inspectEmployeeInSuitability;
@@ -1798,7 +2206,7 @@ function renderSuccessionMatrix() {
         </div>
 
         <button class="btn btn-secondary btn-sm" style="margin-top: auto; justify-content: center;" onclick="inspectRoleInSuitability('${item.role_id}')">
-          Evaluate Candidates for ${item.role_title} →
+          Analyse Candidates for ${item.role_title} using AI →
         </button>
       </div>
     `;
@@ -1806,18 +2214,26 @@ function renderSuccessionMatrix() {
 }
 
 function inspectRoleInSuitability(roleId) {
-  document.getElementById('suit-select-role').value = roleId;
-  navigateToTab('tab-suitability');
-  runSuitabilityEvaluation();
+  state.hrAI.targetRoleId = roleId;
+  const roleSelect = document.getElementById('hr-ai-target-role');
+  if (roleSelect) roleSelect.value = roleId;
+  navigateToTab('tab-hr');
+  document.getElementById('hr-ai-analyzer-module')?.scrollIntoView({ behavior: 'smooth' });
+  executeHRAIEligibilityAnalysis(false);
 }
 
 function inspectEmployeeForRole(empId, roleId) {
-  state.activeEmployeeId = empId;
-  document.getElementById('suit-select-employee').value = empId;
-  document.getElementById('suit-select-role').value = roleId;
-  syncSlidersToEmployee(empId);
-  navigateToTab('tab-suitability');
-  runSuitabilityEvaluation();
+  state.hrAI.selectedEmployeeId = empId;
+  state.hrAI.targetRoleId = roleId;
+  const empSelect = document.getElementById('hr-ai-select-employee');
+  if (empSelect) empSelect.value = empId;
+  const roleSelect = document.getElementById('hr-ai-target-role');
+  if (roleSelect) roleSelect.value = roleId;
+  navigateToTab('tab-hr');
+  document.getElementById('hr-ai-analyzer-module')?.scrollIntoView({ behavior: 'smooth' });
+  loadHRAIEmployeeDossier(empId).then(() => {
+    executeHRAIEligibilityAnalysis(false);
+  });
 }
 
 window.inspectRoleInSuitability = inspectRoleInSuitability;
@@ -1831,6 +2247,14 @@ async function startAssessmentTest() {
   }
 
   const activeEmp = getActiveEmployee();
+  const currentAsm = state.assessments.find(a => a.id === state.activeAssessmentId);
+  if (currentAsm && currentAsm.assigned_to && currentAsm.assigned_to.length > 0) {
+    const isAssigned = currentAsm.assigned_to.includes(activeEmp.id) || currentAsm.assigned_to.includes("all");
+    if (!isAssigned) {
+      showToast(`Assessment "${currentAsm.title}" is assigned separately to selected candidates. ${activeEmp.name} is not assigned.`, "warning");
+      return;
+    }
+  }
   state.testActive = true;
   state.testCurrentIndex = 0;
   state.testAnswers = {};
@@ -1855,8 +2279,26 @@ async function startAssessmentTest() {
     if (state.testTimerInterval) clearInterval(state.testTimerInterval);
     state.testTimerInterval = setInterval(updateTestTimer, 1000);
 
-    // Show Modal
-    document.getElementById('modal-assessment-runner').classList.add('active');
+    // Show Modal in Full-Screen Mode
+    const runnerModal = document.getElementById('modal-assessment-runner');
+    if (runnerModal) {
+      runnerModal.classList.add('active');
+      runnerModal.style.display = 'flex';
+    }
+
+    // Request browser full-screen mode
+    try {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(() => {});
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        }
+      }
+    } catch (fsErr) {
+      // Non-fatal if browser blocks automatic fullscreen
+    }
 
   } catch (error) {
     console.error("Test start error:", error);
@@ -1958,7 +2400,18 @@ function prevTestQuestion() {
 function cancelAssessmentTest() {
   if (confirm("Are you sure you want to exit? Your answers will not be saved.")) {
     clearInterval(state.testTimerInterval);
-    document.getElementById('modal-assessment-runner').classList.remove('active');
+    const runnerModal = document.getElementById('modal-assessment-runner');
+    if (runnerModal) {
+      runnerModal.classList.remove('active');
+      runnerModal.style.display = 'none';
+    }
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    } catch (e) {}
   }
 }
 
@@ -1974,7 +2427,18 @@ async function submitAssessmentTest() {
 
   try {
     const res = await api.submitAssessment(payload);
-    document.getElementById('modal-assessment-runner').classList.remove('active');
+    const runnerModal = document.getElementById('modal-assessment-runner');
+    if (runnerModal) {
+      runnerModal.classList.remove('active');
+      runnerModal.style.display = 'none';
+    }
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    } catch (e) {}
 
     const scorePct = res.scores.score_pct;
     const correct = res.scores.correct_count;
@@ -1984,6 +2448,11 @@ async function submitAssessmentTest() {
 
     // Refresh data to update Top 3 podium and Manager roster
     await loadInitialData();
+
+    // Explicitly reload employee info dossier so the new score immediately displays in Employee Dashboard
+    if (typeof loadEmployeeInfoData === 'function' && activeEmp) {
+      await loadEmployeeInfoData(activeEmp.id);
+    }
 
     // If on Employee tab, re-render
     renderEmployeeSelfView();
@@ -1997,9 +2466,240 @@ async function submitAssessmentTest() {
 window.selectTestOption = selectTestOption;
 window.jumpToQuestion = jumpToQuestion;
 
+function toggleAssessmentFullscreen() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch(() => {});
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
+window.toggleAssessmentFullscreen = toggleAssessmentFullscreen;
+
+document.addEventListener('fullscreenchange', () => {
+  const fsBtnText = document.getElementById('btn-fullscreen-text');
+  if (fsBtnText) {
+    fsBtnText.textContent = document.fullscreenElement ? 'Exit Full Screen' : 'Full Screen';
+  }
+});
+
 // --- Modals: Create Assessment & Add Employee ---
-function openCreateAssessmentModal() {
+// Profile Evaluation Criteria: Skills, Resume, and Certifications
+function getCandidateProfileEvaluation(emp) {
+  // 1. Skills Evaluation (Count + Proficiency)
+  const skillsObj = emp.skills || {};
+  const skillKeys = Object.keys(skillsObj);
+  const skillCount = skillKeys.length;
+  const skillVals = Object.values(skillsObj).filter(v => typeof v === 'number');
+  const avgProficiency = skillVals.length > 0 ? (skillVals.reduce((a, b) => a + b, 0) / skillVals.length) : 0;
+  // Skills score: count (up to 15 skills * 4 = 60) + proficiency (up to 40) = 100 max
+  const skillsScore = Math.min(skillCount * 4, 60) + (avgProficiency * 0.4);
+
+  // 2. Resume Evaluation (Verified file + Experience + Projects)
+  const hasResume = Boolean(emp.resume && (emp.resume.image_url || emp.resume.filename || emp.resume.display_name));
+  const expYears = parseFloat(emp.experience_years || 0);
+  const projectsCount = Array.isArray(emp.projects) ? emp.projects.length : 0;
+  // Has resume = 50 pts, experience = up to 30 pts (3 pts/yr), projects = up to 20 pts (5 pts/proj) = 100 max
+  const resumeScore = (hasResume ? 50 : 0) + Math.min(expYears * 3, 30) + Math.min(projectsCount * 5, 20);
+
+  // 3. Certifications Evaluation (Authentic count, heavy penalty for fake)
+  const certs = Array.isArray(emp.certifications) ? emp.certifications : [];
+  const hasFake = certs.some(c => c && (c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake'))));
+  const authenticCerts = certs.filter(c => c && c.is_authentic !== false && c.verdict !== 'FAKE CERTIFICATE' && (!c.status || !c.status.toLowerCase().includes('fake')));
+  const certCount = authenticCerts.length;
+  // Each authentic cert gives 35 pts (up to 105), fake cert is disqualified (-500)
+  const certScore = hasFake ? -500 : Math.min(certCount * 35, 105);
+
+  // Composite Total Score: 35% Skills + 35% Resume + 30% Certifications
+  const totalScore = (skillsScore * 0.35) + (resumeScore * 0.35) + (certScore * 0.30);
+
+  return {
+    employeeId: emp.id,
+    employee: emp,
+    skillCount,
+    avgProficiency: Math.round(avgProficiency),
+    hasResume,
+    expYears,
+    projectsCount,
+    certCount,
+    hasFake,
+    skillsScore: Math.round(skillsScore),
+    resumeScore: Math.round(resumeScore),
+    certScore: Math.round(certScore),
+    totalScore: Math.round(totalScore * 10) / 10
+  };
+}
+
+function getTopCandidatesByProfile(count = 3) {
+  const emps = state.employees || [];
+  const evaluations = emps.map(emp => getCandidateProfileEvaluation(emp));
+  evaluations.sort((a, b) => {
+    if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+    if (b.certCount !== a.certCount) return b.certCount - a.certCount;
+    if (b.skillsScore !== a.skillsScore) return b.skillsScore - a.skillsScore;
+    return a.employee.name.localeCompare(b.employee.name);
+  });
+  return evaluations.slice(0, count);
+}
+
+function populateAssessmentEmployeeSelection(preselectedId = null) {
+  const container = document.getElementById('asm-employee-selection-list');
+  if (!container) return;
+
+  const emps = state.employees || [];
+  const top3 = getTopCandidatesByProfile(3);
+  const top3Ids = new Set(top3.map(t => t.employeeId));
+
+  container.innerHTML = emps.map(emp => {
+    const evalData = getCandidateProfileEvaluation(emp);
+    const isTop3 = top3Ids.has(emp.id);
+
+    let isChecked = false;
+    if (preselectedId) {
+      isChecked = (emp.id === preselectedId);
+    } else {
+      isChecked = isTop3;
+    }
+
+    const top3Badge = isTop3 
+      ? `<span style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fcd34d; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 9999px;">★ Top 3 Match</span>` 
+      : '';
+
+    const skillBadge = evalData.skillCount > 0
+      ? `<span style="background: #eef2ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">🛠 ${evalData.skillCount} Skills (${evalData.avgProficiency}%)</span>`
+      : `<span style="background: #f1f5f9; color: #94a3b8; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">0 Skills</span>`;
+
+    const resumeBadge = evalData.hasResume
+      ? `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">📄 Resume (${evalData.expYears}y)</span>`
+      : `<span style="background: #f1f5f9; color: #94a3b8; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">No Resume</span>`;
+
+    const certBadge = evalData.hasFake
+      ? `<span style="background: #fef2f2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">⛔ Fake Cert</span>`
+      : (evalData.certCount > 0
+          ? `<span style="background: #ecfdf5; color: #047857; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">✓ ${evalData.certCount} Cert${evalData.certCount > 1 ? 's' : ''}</span>`
+          : `<span style="background: #f1f5f9; color: #94a3b8; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">No Certs</span>`);
+
+    return `
+      <div id="asm-emp-row-${emp.id}" onclick="toggleEmployeeAssessmentCheckbox('${emp.id}', event)" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; border: 1px solid ${isChecked ? '#c7d2fe' : '#e2e8f0'}; background: ${isChecked ? '#f8faff' : '#ffffff'}; cursor: pointer; transition: all 0.15s ease;">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <input type="checkbox" class="asm-emp-checkbox" value="${emp.id}" id="asm-emp-cb-${emp.id}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); updateAssessmentSelectedCount();" style="cursor: pointer; width: 16px; height: 16px; accent-color: #4f46e5;">
+          <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #06b6d4); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0;">
+            ${emp.avatar || emp.name.substring(0, 2).toUpperCase()}
+          </div>
+          <div style="min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-weight: 700; color: #0f172a; font-size: 0.84rem;">${emp.name}</span>
+              ${top3Badge}
+            </div>
+            <div style="font-size: 0.73rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${emp.role} &bull; ${emp.department}
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+          ${skillBadge}
+          ${resumeBadge}
+          ${certBadge}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  updateAssessmentSelectedCount();
+}
+
+function toggleEmployeeAssessmentCheckbox(empId, event) {
+  if (event && event.target && event.target.tagName === 'INPUT') return;
+  const cb = document.getElementById(`asm-emp-cb-${empId}`);
+  if (cb) {
+    cb.checked = !cb.checked;
+    updateAssessmentSelectedCount();
+  }
+}
+
+function updateAssessmentSelectedCount() {
+  const checkboxes = Array.from(document.querySelectorAll('.asm-emp-checkbox'));
+  const checked = checkboxes.filter(cb => cb.checked);
+  const count = checked.length;
+  const total = checkboxes.length;
+
+  checkboxes.forEach(cb => {
+    const row = document.getElementById(`asm-emp-row-${cb.value}`);
+    if (row) {
+      if (cb.checked) {
+        row.style.background = '#f8faff';
+        row.style.borderColor = '#c7d2fe';
+      } else {
+        row.style.background = '#ffffff';
+        row.style.borderColor = '#e2e8f0';
+      }
+    }
+  });
+
+  const badge = document.getElementById('asm-selected-count-badge');
+  if (badge) {
+    badge.textContent = `${count} of ${total} Selected`;
+    badge.style.background = count > 0 ? '#e0f2fe' : '#f1f5f9';
+    badge.style.color = count > 0 ? '#0369a1' : '#64748b';
+    badge.style.borderColor = count > 0 ? '#bae6fd' : '#cbd5e1';
+  }
+
+  const submitBtn = document.getElementById('btn-submit-create-asm');
+  if (submitBtn) {
+    if (count === 0) {
+      submitBtn.textContent = "Schedule & Assign (0 Candidates Selected)";
+    } else if (count === 1) {
+      const singleEmp = (state.employees || []).find(e => e.id === checked[0].value);
+      submitBtn.textContent = `Schedule & Assign (${singleEmp ? singleEmp.name : '1 Candidate'})`;
+    } else {
+      submitBtn.textContent = `Schedule & Assign (${count} Candidates)`;
+    }
+  }
+}
+
+function selectTop3CandidatesForAssessment() {
+  const top3 = getTopCandidatesByProfile(3);
+  const top3Ids = new Set(top3.map(t => t.employeeId));
+
+  document.querySelectorAll('.asm-emp-checkbox').forEach(cb => {
+    cb.checked = top3Ids.has(cb.value);
+  });
+  updateAssessmentSelectedCount();
+
+  const names = top3.map(t => t.employee.name);
+  showToast(`Selected Top 3 Candidates by Skills, Resume & Certs: ${names.join(', ')}`, "success");
+}
+
+function selectAllEmployeesForAssessment(select = true) {
+  document.querySelectorAll('.asm-emp-checkbox').forEach(cb => {
+    cb.checked = Boolean(select);
+  });
+  updateAssessmentSelectedCount();
+  if (select) {
+    showToast(`All ${(state.employees || []).length} employees selected for assessment`, "info");
+  }
+}
+
+function openCreateAssessmentModal(empId = null) {
+  const targetId = (typeof empId === 'string') ? empId : null;
+  populateAssessmentEmployeeSelection(targetId);
   document.getElementById('modal-create-assessment').classList.add('active');
+}
+
+function openCreateAssessmentModalForEmployee(empId) {
+  openCreateAssessmentModal(empId);
+  const emp = (state.employees || []).find(e => e.id === empId);
+  if (emp) {
+    showToast(`Assigning assessment separately to ${emp.name}`, "info");
+  }
 }
 
 function closeCreateAssessmentModal() {
@@ -2015,17 +2715,29 @@ function closeAddEmployeeModal() {
 }
 
 window.openCreateAssessmentModal = openCreateAssessmentModal;
+window.openCreateAssessmentModalForEmployee = openCreateAssessmentModalForEmployee;
 window.closeCreateAssessmentModal = closeCreateAssessmentModal;
+window.selectTop3CandidatesForAssessment = selectTop3CandidatesForAssessment;
+window.selectAllEmployeesForAssessment = selectAllEmployeesForAssessment;
+window.updateAssessmentSelectedCount = updateAssessmentSelectedCount;
+window.toggleEmployeeAssessmentCheckbox = toggleEmployeeAssessmentCheckbox;
 window.openAddEmployeeModal = openAddEmployeeModal;
 window.closeAddEmployeeModal = closeAddEmployeeModal;
 
 async function handleCreateAssessment(e) {
   e.preventDefault();
-  const title = document.getElementById('asm-title').value;
-  const desc = document.getElementById('asm-desc').value;
+  const title = document.getElementById('asm-title').value.trim();
+  const desc = document.getElementById('asm-desc').value.trim();
   const date = document.getElementById('asm-date').value;
   const time = document.getElementById('asm-time').value;
   const duration = parseInt(document.getElementById('asm-duration').value);
+
+  const selectedIds = Array.from(document.querySelectorAll('.asm-emp-checkbox:checked')).map(cb => cb.value);
+
+  if (selectedIds.length === 0) {
+    showToast("Please select at least one employee to assign this assessment.", "warning");
+    return;
+  }
 
   try {
     const res = await api.createAssessment({
@@ -2034,11 +2746,18 @@ async function handleCreateAssessment(e) {
       scheduled_date: date,
       scheduled_time: time,
       duration_minutes: duration,
-      assigned_to: state.employees.map(e => e.id)
+      assigned_to: selectedIds
     });
 
     closeCreateAssessmentModal();
-    showToast(`Assessment "${title}" created and assigned to all employees!`, "success");
+
+    if (selectedIds.length === 1) {
+      const emp = (state.employees || []).find(e => e.id === selectedIds[0]);
+      showToast(`Assessment "${title}" assigned separately to ${emp ? emp.name : '1 candidate'}!`, "success");
+    } else {
+      showToast(`Assessment "${title}" scheduled and assigned to ${selectedIds.length} candidate(s)!`, "success");
+    }
+
     await loadInitialData();
 
   } catch (error) {
@@ -2097,86 +2816,370 @@ async function handleAddEmployee(e) {
 }
 
 // --- Dedicated Employee Profile Modal ---
+
+// --- Google Gemini AI API Key & Status Management ---
+async function checkAndUpdateGeminiStatus() {
+  try {
+    const status = await api.getGeminiStatus();
+    const isConfigured = Boolean(status && status.gemini_configured);
+
+    // Update Header button and dot
+    const headerDot = document.getElementById('header-gemini-dot');
+    const headerText = document.getElementById('header-gemini-text');
+    if (headerDot) {
+      headerDot.style.background = isConfigured ? '#10b981' : (status.status === 'invalid' ? '#ef4444' : '#f59e0b');
+    }
+    if (headerText) {
+      headerText.textContent = isConfigured ? 'Gemini AI: Active' : (status.status === 'invalid' ? 'Gemini AI: Invalid Key' : 'Gemini AI: Set Key');
+    }
+
+    // Update Chat tab provider badge
+    const chatBadge = document.getElementById('tab-ai-assistant-provider-badge');
+    if (chatBadge) {
+      chatBadge.textContent = isConfigured ? 'Google Gemini AI (Active)' : (status.status === 'invalid' ? 'Google Gemini AI (Invalid Key)' : 'Google Gemini AI (Key Required)');
+      chatBadge.style.background = isConfigured ? '#10b981' : (status.status === 'invalid' ? '#ef4444' : '#f59e0b');
+    }
+
+    // Update Modal elements if open
+    const engineNameEl = document.getElementById('gemini-engine-name');
+    const statusBadgeEl = document.getElementById('gemini-status-badge');
+    if (engineNameEl) {
+      engineNameEl.textContent = status.engine || (isConfigured ? 'Google Gemini 2.5 Flash Vision & 1.5 Flash Assistant' : 'LeadSync Forensic & C2PA Engine (Local Fallback)');
+    }
+    if (statusBadgeEl) {
+      if (isConfigured) {
+        statusBadgeEl.textContent = '🟢 Connected (Active)';
+        statusBadgeEl.style.background = '#ecfdf5';
+        statusBadgeEl.style.color = '#059669';
+        statusBadgeEl.style.border = '1px solid #a7f3d0';
+      } else if (status.status === 'invalid') {
+        statusBadgeEl.textContent = '🔴 Invalid / Inactive Key';
+        statusBadgeEl.style.background = '#fef2f2';
+        statusBadgeEl.style.color = '#b91c1c';
+        statusBadgeEl.style.border = '1px solid #fecaca';
+      } else {
+        statusBadgeEl.textContent = '🟡 API Key Not Configured';
+        statusBadgeEl.style.background = '#fef3c7';
+        statusBadgeEl.style.color = '#b45309';
+        statusBadgeEl.style.border = '1px solid #fde68a';
+      }
+    }
+
+    return isConfigured;
+  } catch (err) {
+    console.warn("Could not check Gemini AI status:", err);
+    return false;
+  }
+}
+window.checkAndUpdateGeminiStatus = checkAndUpdateGeminiStatus;
+
+function openGeminiKeyModal() {
+  const modal = document.getElementById('modal-gemini-key');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    checkAndUpdateGeminiStatus();
+    const input = document.getElementById('input-gemini-key');
+    if (input) {
+      setTimeout(() => input.focus(), 100);
+    }
+  }
+}
+window.openGeminiKeyModal = openGeminiKeyModal;
+
+function closeGeminiKeyModal() {
+  const modal = document.getElementById('modal-gemini-key');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+}
+window.closeGeminiKeyModal = closeGeminiKeyModal;
+
+function toggleGeminiKeyVisibility() {
+  const input = document.getElementById('input-gemini-key');
+  if (input) {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+}
+window.toggleGeminiKeyVisibility = toggleGeminiKeyVisibility;
+
+async function submitGeminiKey(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('input-gemini-key');
+  const key = (input ? input.value : '').trim();
+
+  if (!key) {
+    showToast("Please enter a valid Google Gemini API key.", "error");
+    return;
+  }
+
+  const saveBtn = document.getElementById('btn-save-gemini-key');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Verifying with Google...';
+  }
+
+  try {
+    const res = await api.setGeminiKey(key);
+    if (!res.success) {
+      showToast(res.message || "Google rejected this API key.", "error", 8000);
+      await checkAndUpdateGeminiStatus();
+      return;
+    }
+    showToast(res.message || "Google Gemini API Key verified and activated successfully!", "success", 6000);
+    await checkAndUpdateGeminiStatus();
+    closeGeminiKeyModal();
+    if (input) input.value = '';
+  } catch (err) {
+    console.error("Gemini Key configuration error:", err);
+    showToast(err.message || "Failed to configure Gemini API Key", "error", 7000);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save & Activate Gemini AI';
+    }
+  }
+}
+window.submitGeminiKey = submitGeminiKey;
+
+
 async function openProfileModal(empId) {
   const emp = state.employees.find(e => e.id === empId);
   if (!emp) return;
 
   const content = document.getElementById('modal-profile-content');
-  const asm = emp.assessment_scores;
-  const isCompleted = Boolean(asm && asm.completed === true && (asm.score_pct > 0 || asm.correct_count > 0));
-  const scorePct = isCompleted ? (asm.score_pct || 0) : 0;
-  const correctCount = isCompleted ? (asm.correct_count || 0) : 0;
-  const skills = emp.skills || {};
-  const projects = emp.projects || [];
-  const certs = emp.certifications || [];
+  if (!content) return;
 
+  // Show loading skeleton while fetching full dossier
   content.innerHTML = `
-    <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px;">
-      <div style="width: 70px; height: 70px; border-radius: var(--radius-full); background: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800; color: white;">
-        ${emp.avatar || 'EM'}
-      </div>
-      <div>
-        <h3 style="font-size: 1.45rem;">${emp.name}</h3>
-        <div style="color: #0284c7; font-weight: 600; font-size: 0.95rem;">${emp.role} • ${emp.department}</div>
-        <div style="color: var(--text-muted); font-size: 0.84rem; margin-top: 2px;">
-          ${emp.email} • Experience: <strong>${emp.experience_years} Years</strong>
-        </div>
-      </div>
-    </div>
-
-    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
-      ${emp.bio}
-    </p>
-
-    <div style="margin-bottom: 20px;">
-      <h4 style="font-size: 1rem; margin-bottom: 10px; color: #0f172a;">Assessment Performance</h4>
-      <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border-subtle); padding: 14px 18px; border-radius: var(--radius-md);">
-        <div style="font-size: 2.2rem; font-weight: 800; color: ${isCompleted ? '#059669' : '#d97706'}; font-family: var(--font-heading);">${scorePct}%</div>
-        <div style="font-size: 0.88rem; color: var(--text-secondary);">
-          <div>20 Questions Assessment Score (${correctCount}/20 Correct)</div>
-          <div style="color: var(--text-muted); font-size: 0.78rem;">${isCompleted ? `Completed: ${asm.date || 'Oct 2026'}` : 'Status: Not Attended (Assessment Pending)'}</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-bottom: 20px;">
-      <h4 style="font-size: 0.95rem; margin-bottom: 10px; color: #0f172a;">Completed Production Projects (${projects.length})</h4>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${projects.map(p => `
-          <div style="background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px;">
-            <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">${p.title}</div>
-            <div style="font-size: 0.76rem; color: var(--accent-cyan); font-weight: 600;">${p.role} • ${p.duration}</div>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">${p.description}</p>
-            <div style="font-size: 0.78rem; color: #059669; margin-top: 4px; font-weight: 600;">Impact: ${p.impact}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div style="margin-bottom: 20px;">
-      <h4 style="font-size: 0.95rem; margin-bottom: 10px; color: #0f172a;">Existing Skills Proficiency</h4>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-        ${Object.entries(skills).map(([k, v]) => `
-          <div style="background: #f8fafc; border: 1px solid var(--border-subtle); padding: 8px 10px; border-radius: var(--radius-sm);">
-            <div style="font-size: 0.74rem; color: var(--text-secondary);">${k}</div>
-            <div style="font-size: 1rem; font-weight: 700; color: #0f172a; font-family: var(--font-mono);">${v}%</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-      <button class="btn btn-secondary btn-sm" onclick="closeProfileModal()">Close</button>
-      <button class="btn btn-secondary btn-sm" onclick="closeProfileModal(); openManagerEditModal('${emp.id}');" style="border-color:#38bdf8; color:#0284c7; background:#f0f9ff; font-weight:700;">
-        ✏️ Edit Details
-      </button>
-      <button class="btn btn-primary btn-sm" onclick="closeProfileModal(); inspectEmployeeInSuitability('${emp.id}');">
-        Run Suitability Analysis →
-      </button>
+    <div style="text-align: center; padding: 40px 20px;">
+      <div class="spinner-ring" style="margin: 0 auto 16px;"></div>
+      <div style="font-size: 1.05rem; font-weight: 700; color: #1e1b4b;">Loading complete submitted dossier for ${emp.name}...</div>
+      <p style="font-size: 0.82rem; color: #64748b; margin-top: 4px;">Fetching verified experience, 20-Q breakdown, IT skills, cert detector status, and resume.</p>
     </div>
   `;
-
   document.getElementById('modal-employee-profile').classList.add('active');
+
+  let dossier = null;
+  try {
+    dossier = await api.getEmployeeDossier(empId);
+  } catch (err) {
+    console.warn("Could not fetch full dossier, using base profile:", err);
+    dossier = emp;
+  }
+
+  // 1. Assessment details
+  const asm = dossier.assessment_marks || emp.assessment_scores || {};
+  const isCompleted = Boolean(asm && asm.completed === true && (asm.score_pct > 0 || asm.correct_count > 0));
+  const scorePct = isCompleted ? (asm.score_pct || 0) : 0;
+  const correctCount = isCompleted ? (asm.correct_count !== undefined ? asm.correct_count : Math.round((scorePct / 100) * 20)) : 0;
+  const catScores = asm.category_scores || {};
+
+  // 2. Skills
+  const skillsMap = dossier.skills || emp.skills || {};
+  const skillsEntries = Object.entries(skillsMap);
+
+  // 3. Certifications with detector verdicts
+  const certs = Array.isArray(dossier.certifications) ? dossier.certifications : (emp.certifications || []);
+  const fakeCerts = certs.filter(c => c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake')));
+  const authCerts = certs.filter(c => !fakeCerts.includes(c));
+
+  // 4. Resume
+  const resume = dossier.resume || emp.resume || null;
+  const hasResume = Boolean(resume && (resume.filename || resume.image_url));
+
+  // 5. Projects
+  const projects = dossier.projects || emp.projects || (resume && resume.projects) || [];
+
+  content.innerHTML = `
+    <!-- Top Candidate Banner -->
+    <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); padding: 20px; border-radius: 12px; border: 1px solid #dbeafe;">
+      <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #0284c7); display: flex; align-items: center; justify-content: center; font-size: 1.85rem; font-weight: 800; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); flex-shrink: 0;">
+        ${emp.avatar || dossier.avatar || 'EM'}
+      </div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">${emp.name}</h3>
+            <div style="color: #0284c7; font-weight: 700; font-size: 0.95rem;">
+              ${emp.role} &bull; ${emp.department} &bull; <span style="color: #4f46e5;">${dossier.experience_years || emp.experience_years} Years Experience</span>
+            </div>
+            <div style="color: #64748b; font-size: 0.82rem; margin-top: 3px;">
+              ${emp.email} &bull; Education: <strong>${dossier.education || emp.education || resume?.education || 'Credentials on file'}</strong>
+            </div>
+          </div>
+          <div>
+            ${isCompleted ? `
+              <span class="badge-tag" style="background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; font-weight: 800; font-size: 0.88rem; padding: 6px 14px;">
+                ✓ Assessment: ${scorePct}% (${correctCount}/20 Q)
+              </span>
+            ` : `
+              <span class="badge-tag" style="background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; font-weight: 800; font-size: 0.88rem; padding: 6px 14px;">
+                ⏳ Assessment: Not Attended (0%)
+              </span>
+            `}
+          </div>
+        </div>
+        ${emp.bio ? `<p style="font-size: 0.85rem; color: #475569; margin: 10px 0 0 0; line-height: 1.5;">${emp.bio}</p>` : ''}
+      </div>
+    </div>
+
+    <!-- GRID: ASSESSMENT BREAKDOWN + SKILLS -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <!-- 20-Q Assessment Detailed Breakdown -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between;">
+          <span>📝 20-Question Assessment Breakdown</span>
+          <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">${correctCount}/20 Correct</span>
+        </h4>
+        <div style="display: flex; align-items: center; gap: 12px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
+          <div style="font-size: 1.8rem; font-weight: 800; color: ${isCompleted ? '#059669' : '#d97706'}; font-family: var(--font-heading);">${scorePct}%</div>
+          <div style="font-size: 0.8rem; color: #475569;">
+            <div style="font-weight: 700;">${isCompleted ? 'Test Completed & Verified' : 'Assessment Pending / Not Started'}</div>
+            <div style="color: #64748b; font-size: 0.74rem;">${asm.date ? `Date: ${asm.date}` : 'Scheduled across Python, Java, C, DBMS, Aptitude'}</div>
+          </div>
+        </div>
+        <!-- Category Breakdown -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          ${Object.keys(catScores).length > 0 ? Object.entries(catScores).map(([cat, val]) => `
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.76rem; font-weight: 600; color: #334155; margin-bottom: 2px;">
+                <span>${cat}</span>
+                <span>${val}%</span>
+              </div>
+              <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                <div style="width: ${val}%; height: 100%; background: ${val >= 80 ? '#10b981' : (val >= 65 ? '#3b82f6' : '#f59e0b')}; border-radius: 3px;"></div>
+              </div>
+            </div>
+          `).join('') : `
+            <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 10px 0;">No category test breakdown on record yet.</div>
+          `}
+        </div>
+      </div>
+
+      <!-- Submitted Computer & IT Skills -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between;">
+          <span>💻 Submitted Computer &amp; IT Skills</span>
+          <span class="badge-tag" style="background: #e0f2fe; color: #0284c7; font-weight: 700;">${skillsEntries.length} Skills</span>
+        </h4>
+        <div style="max-height: 220px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 6px; padding: 2px;">
+          ${skillsEntries.length > 0 ? skillsEntries.map(([skill, prof]) => `
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 8px; font-size: 0.78rem;">
+              <span style="font-weight: 700; color: #1e293b;">${skill}</span>
+              <span style="background: #4f46e5; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">${prof}%</span>
+            </div>
+          `).join('') : `
+            <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 10px 0;">No computer skills selected by employee.</div>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID: CERTIFICATIONS WITH DETECTOR + RESUME DOSSIER -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <!-- Certificates with AI Authenticity Detector Status -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between;">
+          <span>📜 Verified Certificates (${certs.length})</span>
+          ${fakeCerts.length > 0 
+            ? `<span class="badge-tag" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700;">⚠️ ${fakeCerts.length} Fake Detected</span>` 
+            : `<span class="badge-tag" style="background: #ecfdf5; color: #059669; font-weight: 700;">✓ All Authentic</span>`}
+        </h4>
+        <div style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+          ${certs.length > 0 ? certs.map((c, idx) => {
+            const isFake = c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake'));
+            const title = typeof c === 'string' ? c : (c.title || 'Professional Certification');
+            const issuer = typeof c === 'object' ? (c.issuer || 'Accredited Authority') : 'Accredited Authority';
+            const imgUrl = typeof c === 'object' ? (c.image_url || c.url) : null;
+            return `
+              <div style="background: ${isFake ? '#fef2f2' : '#f8fafc'}; border: 1px solid ${isFake ? '#fecaca' : '#e2e8f0'}; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 700; font-size: 0.84rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</div>
+                  <div style="font-size: 0.72rem; color: #64748b;">${issuer}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                  ${isFake 
+                    ? `<span class="badge-tag" style="background: #dc2626; color: white; border: none; font-size: 0.68rem; font-weight: 800;">FAKE CERTIFICATE</span>`
+                    : `<span class="badge-tag" style="background: #059669; color: white; border: none; font-size: 0.68rem; font-weight: 800;">ORIGINAL (VERIFIED)</span>`
+                  }
+                  ${imgUrl ? `<button type="button" class="btn btn-secondary btn-xs" onclick="openImageLightbox('${imgUrl}', '${title}')" style="font-size: 0.7rem; padding: 2px 6px;">👁</button>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('') : `
+            <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 10px 0;">No certificates submitted by employee.</div>
+          `}
+        </div>
+      </div>
+
+      <!-- Uploaded Resume Dossier -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between;">
+          <span>📄 Uploaded Resume Dossier</span>
+          ${hasResume ? `<span class="badge-tag" style="background: #ecfdf5; color: #059669; font-weight: 700;">✓ Document on File</span>` : `<span class="badge-tag" style="background: #f1f5f9; color: #64748b;">No File</span>`}
+        </h4>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+          ${hasResume ? `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-weight: 700; font-size: 0.84rem; color: #0f172a;">${resume.filename || 'Candidate_Resume.pdf'}</span>
+              ${resume.image_url ? `
+                <button type="button" class="btn btn-secondary btn-xs" onclick="openImageLightbox('${resume.image_url}', 'Resume Dossier - ${emp.name}')" style="font-weight: 700; color: #0284c7;">
+                  👁 Preview Resume
+                </button>
+              ` : ''}
+            </div>
+            <div style="font-size: 0.78rem; color: #475569; line-height: 1.45;">
+              <div><strong>Education:</strong> ${resume.education || dossier.education || 'B.S. in Computer Science'}</div>
+              <div><strong>Verified Tenure:</strong> ${dossier.experience_years || emp.experience_years} Years Professional Experience</div>
+              <div><strong>Projects on File:</strong> ${projects.length} Verified Deliveries</div>
+            </div>
+          ` : `
+            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">
+              No resume document uploaded yet. Candidate profile uses baseline enterprise system records.
+            </div>
+          `}
+        </div>
+      </div>
+    </div>
+
+    <!-- Production Projects -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+      <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e1b4b; margin: 0 0 12px 0;">
+        💼 Verified Production Projects (${projects.length})
+      </h4>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+        ${projects.length > 0 ? projects.map(p => `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">${p.title}</div>
+            <div style="font-size: 0.74rem; color: #0284c7; font-weight: 600; margin-top: 2px;">${p.role || 'Contributor'} &bull; ${p.duration || 'Verified'}</div>
+            <p style="font-size: 0.78rem; color: #475569; margin: 6px 0; line-height: 1.4;">${p.description || ''}</p>
+            <div style="font-size: 0.74rem; color: #059669; font-weight: 700;">Impact: ${p.impact || 'Completed'}</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+              ${(p.tech_stack || []).map(t => `<span style="background: #eef2ff; color: #4338ca; padding: 1px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 600;">${t}</span>`).join('')}
+            </div>
+          </div>
+        `).join('') : `
+          <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">No production projects on record.</div>
+        `}
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+      <span style="font-size: 0.78rem; color: #64748b;">
+        🔒 HR Read-Only Inspection &bull; Information updated by employee from Employee Dashboard
+      </span>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeProfileModal()">Close</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="closeProfileModal(); selectAndAnalyzeCandidateInAI('${emp.id}');" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); border: none; font-weight: 700; padding: 8px 18px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>⚡ Analyse Candidate with AI</span>
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function closeProfileModal() {
@@ -2799,6 +3802,146 @@ async function navigateHRAICandidate(direction) {
 }
 window.navigateHRAICandidate = navigateHRAICandidate;
 
+function renderHRAIEmployeeSubmittedDossier(dossier) {
+  const container = document.getElementById('hr-ai-employee-submitted-dossier');
+  if (!container || !dossier) return;
+
+  const expYrs = dossier.experience_years !== undefined ? parseFloat(dossier.experience_years) : 0.0;
+  const asm = dossier.assessment_marks || dossier.assessment_scores || {};
+  const asmCompleted = Boolean(asm && asm.completed === true && (asm.score_pct > 0 || asm.correct_count > 0));
+  const scorePct = asmCompleted ? (asm.score_pct || 0) : 0;
+  const correctCount = asmCompleted ? (asm.correct_count !== undefined ? asm.correct_count : Math.round((scorePct / 100) * 20)) : 0;
+
+  // Skills
+  const skillsMap = dossier.skills || {};
+  const skillsEntries = Object.entries(skillsMap);
+  const skillsCount = skillsEntries.length;
+
+  // Certs
+  const certs = Array.isArray(dossier.certifications) ? dossier.certifications : [];
+  const fakeCerts = certs.filter(c => c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake')));
+  const authCerts = certs.filter(c => !fakeCerts.includes(c));
+
+  // Resume
+  const resume = dossier.resume || null;
+  const edu = resume?.education || dossier.education || 'Credentials verified on file';
+  const bio = resume?.bio || dossier.bio || 'Employee has not provided bio notes yet.';
+
+  container.innerHTML = `
+    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 22px; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+      <!-- Employee Profile Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 18px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #06b6d4); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+            ${dossier.avatar || dossier.name?.substring(0, 2).toUpperCase() || 'EM'}
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;">${dossier.name}</h3>
+              <span style="font-size: 0.76rem; background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${dossier.employee_id || dossier.id}</span>
+              ${dossier.appointed_role ? `<span class="badge-tag" style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 800;">👑 Appointed: ${dossier.appointed_role}</span>` : ''}
+            </div>
+            <div style="font-size: 0.85rem; color: #64748b; margin-top: 3px;">
+              ${dossier.role} &bull; ${dossier.department} &bull; Verified Experience: <strong style="color: #0284c7;">${expYrs} Years</strong>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <span class="badge-tag" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-weight: 700; font-size: 0.78rem;">
+            ✓ Live Credentials (Submitted from Employee Dashboard)
+          </span>
+        </div>
+      </div>
+
+      <!-- 4 Submitted Data Blocks -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+        
+        <!-- 1. Experience & Education & Bio -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <strong style="font-size: 0.88rem; color: #1e293b;">⏱ Experience &amp; Bio</strong>
+            <span class="badge-tag" style="background: #e0f2fe; color: #0284c7; font-weight: 800;">${expYrs} Years</span>
+          </div>
+          <div style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">
+            <strong>Education:</strong> ${edu}
+          </div>
+          <div style="font-size: 0.77rem; color: #64748b; line-height: 1.5; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #e2e8f0;">
+            "${bio}"
+          </div>
+        </div>
+
+        <!-- 2. 20-Q Assessment Performance -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <strong style="font-size: 0.88rem; color: #1e293b;">📝 20-Q Assessment Result</strong>
+            ${asmCompleted 
+              ? `<span class="badge-tag" style="background: #ecfdf5; color: #059669; font-weight: 800;">Score: ${scorePct}% (${correctCount}/20 Q)</span>`
+              : `<span class="badge-tag" style="background: #fef3c7; color: #b45309; font-weight: 700;">Pending Test (0%)</span>`}
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.74rem;">
+            ${Object.entries(asmCompleted && asm.category_scores && Object.keys(asm.category_scores).length > 0 ? asm.category_scores : { Python: 0, Java: 0, C: 0, DBMS: 0, "Other Tech": 0, Aptitude: 0, Communication: 0 }).map(([cat, val]) => `
+              <div style="background: #f8fafc; padding: 5px 8px; border-radius: 4px; display: flex; justify-content: space-between; border: 1px solid #f1f5f9;">
+                <span style="color: #64748b;">${cat}:</span>
+                <strong style="color: #4338ca;">${val}%</strong>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 3. Submitted IT Skills -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <strong style="font-size: 0.88rem; color: #1e293b;">💻 Technical &amp; IT Skills</strong>
+            <span class="badge-tag" style="background: #eef2ff; color: #4338ca; font-weight: 800;">${skillsCount} Skills</span>
+          </div>
+          ${skillsCount === 0 ? `<div style="font-size: 0.78rem; color: #94a3b8; padding: 12px 0;">Employee has not submitted skills yet.</div>` : `
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 130px; overflow-y: auto;">
+              ${skillsEntries.map(([sk, val]) => `
+                <span style="background: #eef2ff; color: #3730a3; padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; border: 1px solid #c7d2fe;">
+                  ${sk} <strong style="color: #4f46e5;">(${val}%)</strong>
+                </span>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+        <!-- 4. Submitted Certifications & Resume -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <strong style="font-size: 0.88rem; color: #1e293b;">📜 Certificates &amp; Resume</strong>
+            ${fakeCerts.length > 0 
+              ? `<span class="badge-tag" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800;">⛔ Fake Detected</span>`
+              : (authCerts.length > 0 
+                ? `<span class="badge-tag" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-weight: 700;">✓ Authentic (${authCerts.length})</span>`
+                : `<span class="badge-tag" style="background: #f8fafc; color: #64748b;">No Certs</span>`)}
+          </div>
+          <!-- Certificates list -->
+          <div style="max-height: 80px; overflow-y: auto; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;">
+            ${certs.length === 0 ? `<div style="font-size: 0.75rem; color: #94a3b8;">No certificates uploaded.</div>` : certs.map(c => {
+              const isFake = c.is_authentic === false || c.verdict === 'FAKE CERTIFICATE' || (c.status && c.status.toLowerCase().includes('fake'));
+              return `
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.74rem; background: ${isFake ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${isFake ? '#fecaca' : '#bbf7d0'}; padding: 4px 8px; border-radius: 4px;">
+                  <span style="font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">${c.title}</span>
+                  <span style="font-weight: 800; font-size: 0.7rem; color: ${isFake ? '#dc2626' : '#059669'};">${isFake ? '⛔ FAKE' : '✓ AUTHENTIC'}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <!-- Resume file -->
+          <div style="padding-top: 6px; border-top: 1px solid #f1f5f9; font-size: 0.76rem; display: flex; align-items: center; justify-content: space-between;">
+            <span style="color: #64748b;">Resume Dossier:</span>
+            ${resume && (resume.filename || resume.display_name) 
+              ? `<span style="color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 2px 8px; border-radius: 4px;">📄 ${resume.display_name || resume.filename}</span>`
+              : `<span style="color: #94a3b8;">Not Uploaded</span>`}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+window.renderHRAIEmployeeSubmittedDossier = renderHRAIEmployeeSubmittedDossier;
+
 async function loadHRAIEmployeeDossier(empId) {
   try {
     const dossier = await api.getEmployeeDossier(empId);
@@ -2810,33 +3953,19 @@ async function loadHRAIEmployeeDossier(empId) {
       deptBadge.textContent = `${dossier.department} • ${dossier.experience_years} Yrs Exp`;
     }
 
-    // Update Experience input
-    const expInput = document.getElementById('hr-ai-emp-experience');
-    if (expInput) {
-      expInput.value = dossier.experience_years !== undefined ? dossier.experience_years : 0.0;
-    }
-
-    // Pre-populate skills known
+    // Populate skills known for AI evaluation
     state.hrAI.selectedSkills.clear();
     if (dossier.skills) {
       Object.keys(dossier.skills).forEach(sk => state.hrAI.selectedSkills.add(sk));
     }
-    // Also add technologies from verified projects
     if (dossier.resume?.projects) {
       dossier.resume.projects.forEach(p => {
         (p.tech_stack || []).forEach(t => state.hrAI.selectedSkills.add(t));
       });
     }
 
-    // Reset uploaded overrides for fresh candidate view
-    state.hrAI.uploadedCertificates = [];
-    state.hrAI.uploadedResume = null;
-
-    // Render components
-    renderHRAIAssessmentMarks(dossier.assessment_marks);
-    renderHRAISkillsCloud();
-    renderHRAICertificatesGallery();
-    renderHRAIResumePreview(dossier.resume);
+    // Render the complete submitted dossier display
+    renderHRAIEmployeeSubmittedDossier(dossier);
 
   } catch (error) {
     console.error("Failed to load employee dossier:", error);
@@ -3258,11 +4387,11 @@ function resetHRAIAnalyzerDefaults() {
 
 function getEffectiveAssessmentMarks() {
   const baseMarks = state.hrAI.dossier?.assessment_marks || {
-    score_pct: 80, correct_count: 16, total_questions: 20, completed: true, category_scores: {}
+    score_pct: 0, correct_count: 0, total_questions: 20, completed: false, category_scores: {}
   };
   const isSim = state.hrAI.simulatingMarks;
   if (isSim) {
-    const simScore = parseInt(document.getElementById('sim-overall-score')?.value) || 80;
+    const simScore = parseInt(document.getElementById('sim-overall-score')?.value) || 0;
     return {
       ...baseMarks,
       score_pct: simScore,
@@ -3306,13 +4435,18 @@ async function executeHRAIEligibilityAnalysis(compareAll = false) {
     }
   }, 220);
 
-  // Prepare payload
+  // Prepare payload from candidate's verified submitted credentials
   const isCustomRole = state.hrAI.targetRoleId === 'CUSTOM';
   const customRoleTitle = isCustomRole ? (document.getElementById('hr-ai-custom-role-title')?.value || "Specialized Lead") : null;
   const customRoleExp = isCustomRole ? (parseFloat(document.getElementById('hr-ai-custom-role-exp')?.value) || 4.0) : null;
 
-  const userExp = parseFloat(document.getElementById('hr-ai-emp-experience')?.value);
-  const expYears = !isNaN(userExp) ? userExp : (state.hrAI.dossier?.experience_years || 4.0);
+  const dossier = state.hrAI.dossier || {};
+  const expYears = (dossier.experience_years !== undefined && dossier.experience_years !== null) 
+    ? parseFloat(dossier.experience_years) 
+    : 0.0;
+
+  const submittedCerts = dossier.certifications || [];
+  const certTitles = submittedCerts.map(c => typeof c === 'string' ? c : (c.title || 'Certificate'));
 
   const payload = {
     role_id: state.hrAI.targetRoleId,
@@ -3320,10 +4454,11 @@ async function executeHRAIEligibilityAnalysis(compareAll = false) {
     target_experience_years: customRoleExp,
     employee_id: state.hrAI.selectedEmployeeId,
     selected_skills: Array.from(state.hrAI.selectedSkills),
-    certifications: (state.hrAI.dossier?.certifications || []).map(c => c.title).concat(state.hrAI.uploadedCertificates.map(c => c.title)),
-    certificate_images: (state.hrAI.dossier?.certifications || []).concat(state.hrAI.uploadedCertificates),
-    resume_info: state.hrAI.uploadedResume || state.hrAI.dossier?.resume,
-    assessment_marks: getEffectiveAssessmentMarks(),
+    custom_skills_dict: dossier.skills || {},
+    certifications: certTitles,
+    certificate_images: submittedCerts,
+    resume_info: dossier.resume,
+    assessment_marks: dossier.assessment_marks || getEffectiveAssessmentMarks(),
     experience_years: expYears,
     compare_all_employees: compareAll
   };
@@ -3450,10 +4585,10 @@ function renderHRAIAnalysisOutput(data, showAll15 = false) {
           <span style="font-size: 1.1rem;">📝</span>
         </div>
         <div class="pillar-score-badge" style="color: #4f46e5;">
-          ${dims.assessment_marks_fit || 80}%
+          ${dims.assessment_marks_fit ?? 0}%
         </div>
         <div style="font-size: 0.78rem; color: #334155; margin-top: 4px; font-weight: 600;">
-          Exam Mark: ${asm.score_pct || 80}% (${asm.correct_count || 16}/20 Qs)
+          Exam Mark: ${asm.score_pct ?? 0}% (${asm.correct_count ?? 0}/20 Qs)
         </div>
         <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
           Tested categories weighted by ${role.title} priorities.
@@ -3646,7 +4781,7 @@ function renderHRAIAnalysisOutput(data, showAll15 = false) {
               ${bestCand.name} &bull; <span style="font-size: 1rem; color: #92400e; font-weight: 600;">${bestCand.current_role}</span>
             </h2>
             <div style="font-size: 0.84rem; color: #451a03;">
-              AI Match Index: <strong>${bestCand.overall_score}%</strong> &bull; Assessment Mark: <strong>${bestCand.dimension_scores?.assessment_marks_fit || 90}%</strong> &bull; Experience: <strong>${bestCand.experience_years} Yrs</strong>
+              AI Match Index: <strong>${bestCand.overall_score}%</strong> &bull; Assessment Mark: <strong>${bestCand.dimension_scores?.assessment_marks_fit ?? 0}%</strong> &bull; Experience: <strong>${bestCand.experience_years} Yrs</strong>
             </div>
           </div>
         </div>
@@ -3697,7 +4832,7 @@ function renderHRAIAnalysisOutput(data, showAll15 = false) {
                 <td>${c.experience_years} yrs</td>
                 <td>
                   <span style="font-family: var(--font-mono); font-weight: 700; color: #4f46e5;">
-                    ${c.dimension_scores?.assessment_marks_fit || 80}%
+                    ${c.dimension_scores?.assessment_marks_fit ?? 0}%
                   </span>
                 </td>
                 <td>
@@ -3757,8 +4892,8 @@ function scrollToAIAnalyzer(event) {
   if (event) {
     try { event.preventDefault(); } catch (err) {}
   }
-  // Navigate directly to AI Role Analyzer tab
-  navigateToTab('tab-ai-matcher');
+  // Navigate directly to HR Dashboard where the single AI analyzer section is located
+  navigateToTab('tab-hr');
 
   // Locate the module element
   const moduleEl = document.getElementById('hr-ai-analyzer-module');
@@ -3886,10 +5021,14 @@ async function saveAndGoToNextEmpInfo() {
 window.saveAndGoToNextEmpInfo = saveAndGoToNextEmpInfo;
 
 function openCandidateInEmpInfo(empId) {
-  navigateToTab('tab-employee-info');
+  state.activeEmployeeId = empId;
   state.empInfo.selectedEmployeeId = empId;
   const selectEl = document.getElementById('emp-info-select');
   if (selectEl) selectEl.value = empId;
+  const empTabSelect = document.getElementById('emp-tab-user-select');
+  if (empTabSelect) empTabSelect.value = empId;
+  navigateToTab('tab-employee');
+  renderEmployeeSelfView();
   loadEmployeeInfoData(empId);
 }
 window.openCandidateInEmpInfo = openCandidateInEmpInfo;
@@ -3899,6 +5038,16 @@ async function loadEmployeeInfoData(empId) {
     const dossier = await api.getEmployeeDossier(empId);
     state.empInfo.currentEmployee = dossier;
 
+    // Ensure IT skills catalog is loaded and populated
+    if (!state.hrAI.itSkillsCatalog || Object.keys(state.hrAI.itSkillsCatalog).length === 0) {
+      try {
+        const catalogRes = await api.getITSkillsCatalog();
+        state.hrAI.itSkillsCatalog = catalogRes.categories || DEFAULT_IT_SKILLS_CATALOG;
+      } catch (e) {
+        state.hrAI.itSkillsCatalog = { ...DEFAULT_IT_SKILLS_CATALOG };
+      }
+    }
+
     // 1. Experience
     const exp = dossier.experience_years !== undefined ? parseFloat(dossier.experience_years) : 0.0;
     state.empInfo.experienceYears = exp;
@@ -3907,26 +5056,26 @@ async function loadEmployeeInfoData(empId) {
     const expBadge = document.getElementById('emp-info-exp-badge');
     if (expBadge) expBadge.textContent = `${exp} Yrs`;
 
-    // 2. Assessment Marks
-    const asm = dossier.assessment_marks || {};
+    // 2. Assessment Marks (Static & Tamper-Proof)
+    const asm = dossier.assessment_marks || dossier.assessment_scores || {};
     state.empInfo.assessmentCompleted = Boolean(asm.completed);
     state.empInfo.assessmentScore = asm.score_pct !== undefined ? parseInt(asm.score_pct) : 0;
+    state.empInfo.assessmentCorrectCount = asm.correct_count !== undefined 
+      ? parseInt(asm.correct_count) 
+      : Math.round((state.empInfo.assessmentScore / 100) * 20);
     
     const catScores = asm.category_scores || {};
+    const baseScore = state.empInfo.assessmentCompleted ? state.empInfo.assessmentScore : 0;
     state.empInfo.categoryScores = {
-      "Python": catScores["Python"] !== undefined ? catScores["Python"] : state.empInfo.assessmentScore,
-      "Java": catScores["Java"] !== undefined ? catScores["Java"] : state.empInfo.assessmentScore,
-      "C": catScores["C"] !== undefined ? catScores["C"] : state.empInfo.assessmentScore,
-      "DBMS": catScores["DBMS"] !== undefined ? catScores["DBMS"] : state.empInfo.assessmentScore,
-      "Other Tech": catScores["Other Tech"] !== undefined ? catScores["Other Tech"] : state.empInfo.assessmentScore,
-      "Communication": catScores["Communication"] !== undefined ? catScores["Communication"] : state.empInfo.assessmentScore,
-      "Aptitude": catScores["Aptitude"] !== undefined ? catScores["Aptitude"] : state.empInfo.assessmentScore
+      "Python": catScores["Python"] !== undefined ? catScores["Python"] : baseScore,
+      "Java": catScores["Java"] !== undefined ? catScores["Java"] : baseScore,
+      "C": catScores["C"] !== undefined ? catScores["C"] : baseScore,
+      "DBMS": catScores["DBMS"] !== undefined ? catScores["DBMS"] : baseScore,
+      "Other Tech": catScores["Other Tech"] !== undefined ? catScores["Other Tech"] : baseScore,
+      "Communication": catScores["Communication"] !== undefined ? catScores["Communication"] : baseScore,
+      "Aptitude": catScores["Aptitude"] !== undefined ? catScores["Aptitude"] : baseScore
     };
 
-    const asmChk = document.getElementById('emp-info-asm-attended');
-    if (asmChk) asmChk.checked = state.empInfo.assessmentCompleted;
-    const asmScoreInput = document.getElementById('emp-info-asm-score');
-    if (asmScoreInput) asmScoreInput.value = state.empInfo.assessmentScore;
     updateEmpInfoAsmBadge();
     renderEmpInfoCategorySliders();
 
@@ -4031,41 +5180,78 @@ function setEmpInfoExp(val) {
 }
 
 function handleEmpInfoAsmToggle(checked) {
-  state.empInfo.assessmentCompleted = checked;
-  if (checked && state.empInfo.assessmentScore === 0) {
-    handleEmpInfoAsmScoreChange(75);
-    const scoreInput = document.getElementById('emp-info-asm-score');
-    if (scoreInput) scoreInput.value = 75;
-  } else {
-    updateEmpInfoAsmBadge();
-    renderEmpInfoSummary(state.empInfo.currentEmployee);
-  }
+  // Assessment marks are static and cannot be modified by the employee
 }
 
 function handleEmpInfoAsmScoreChange(val) {
-  const score = Math.min(100, Math.max(0, parseInt(val) || 0));
-  state.empInfo.assessmentScore = score;
-  if (score > 0) {
-    state.empInfo.assessmentCompleted = true;
-    const chk = document.getElementById('emp-info-asm-attended');
-    if (chk) chk.checked = true;
-  }
-  Object.keys(state.empInfo.categoryScores).forEach(cat => {
-    state.empInfo.categoryScores[cat] = score;
-  });
-  updateEmpInfoAsmBadge();
-  renderEmpInfoCategorySliders();
-  renderEmpInfoSummary(state.empInfo.currentEmployee);
+  // Assessment marks are static and cannot be modified by the employee
 }
 
 function updateEmpInfoAsmBadge() {
   const badge = document.getElementById('emp-info-asm-badge');
-  if (!badge) return;
-  const isAttended = state.empInfo.assessmentCompleted;
+  const isAttended = Boolean(state.empInfo.assessmentCompleted && state.empInfo.assessmentScore > 0);
   const score = state.empInfo.assessmentScore;
-  badge.textContent = isAttended && score > 0 
-    ? `${score}% (Attended)` 
-    : (score > 0 ? `${score}%` : '0% (Unscored)');
+  const correctCount = state.empInfo.assessmentCorrectCount !== undefined 
+    ? state.empInfo.assessmentCorrectCount 
+    : Math.round((score / 100) * 20);
+
+  if (badge) {
+    if (isAttended) {
+      badge.textContent = `${score}% (${correctCount}/20 Correct)`;
+      badge.style.background = "#ecfdf5";
+      badge.style.color = "#047857";
+      badge.style.border = "1px solid #a7f3d0";
+    } else {
+      badge.textContent = "0% (Unscored)";
+      badge.style.background = "#f1f5f9";
+      badge.style.color = "#64748b";
+      badge.style.border = "1px solid #e2e8f0";
+    }
+  }
+
+  const statusBox = document.getElementById('emp-info-asm-status-box');
+  if (statusBox) {
+    if (isAttended) {
+      statusBox.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; font-weight: 800; flex-shrink: 0; border: 1px solid #a7f3d0;">✓</div>
+            <div>
+              <div style="font-size: 0.84rem; font-weight: 700; color: #065f46;">Official Assessment Completed &amp; Scored</div>
+              <div style="font-size: 0.76rem; color: #059669; font-weight: 600; margin-top: 2px;">
+                Official score: <strong>${correctCount} of 20</strong> questions answered correctly.
+              </div>
+            </div>
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <div style="font-size: 1.35rem; font-weight: 800; color: ${score >= 70 ? '#059669' : '#d97706'}; line-height: 1;">${score}%</div>
+            <div style="font-size: 0.68rem; color: #64748b; font-weight: 600; margin-top: 2px;">Static Verified Mark</div>
+          </div>
+        </div>
+      `;
+      statusBox.style.background = "#f0fdf4";
+      statusBox.style.borderColor = "#bbf7d0";
+    } else {
+      statusBox.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700; flex-shrink: 0;">🔒</div>
+            <div>
+              <div style="font-size: 0.84rem; font-weight: 700; color: #334155;">Assessment Status: Not Attended / Unscored</div>
+              <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+                Assessment mark is static. Take the assigned test in Section 1 above to record your score.
+              </div>
+            </div>
+          </div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #94a3b8; text-align: right; flex-shrink: 0;">
+            0%
+          </div>
+        </div>
+      `;
+      statusBox.style.background = "#f8fafc";
+      statusBox.style.borderColor = "#e2e8f0";
+    }
+  }
 }
 
 function renderEmpInfoCategorySliders() {
@@ -4082,36 +5268,39 @@ function renderEmpInfoCategorySliders() {
     { key: "Aptitude", label: "Aptitude", color: "#ec4899" }
   ];
 
+  const isCompleted = Boolean(state.empInfo.assessmentCompleted && state.empInfo.assessmentScore > 0);
+
   container.innerHTML = cats.map(c => {
-    const val = state.empInfo.categoryScores[c.key] !== undefined ? state.empInfo.categoryScores[c.key] : state.empInfo.assessmentScore;
+    const val = isCompleted
+      ? (state.empInfo.categoryScores[c.key] !== undefined ? state.empInfo.categoryScores[c.key] : state.empInfo.assessmentScore)
+      : 0;
     return `
-      <div style="background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-weight: 600; color: #334155;">
+      <div style="background: #f8fafc; padding: 7px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #334155; font-size: 0.74rem;">
           <span>${c.label}</span>
-          <span id="emp-info-cat-val-${c.key}" style="font-weight: 800; color: ${c.color};">${val}%</span>
+          <span style="font-weight: 800; color: ${val > 0 ? c.color : '#94a3b8'};">${val}%</span>
         </div>
-        <input type="range" min="0" max="100" value="${val}" style="width: 100%; accent-color: ${c.color};" oninput="handleEmpInfoCatScoreChange('${c.key}', this.value)">
+        <div style="height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+          <div style="width: ${val}%; height: 100%; background: ${val > 0 ? c.color : 'transparent'}; border-radius: 9999px; transition: width 0.3s ease;"></div>
+        </div>
       </div>
     `;
   }).join('');
 }
 
 function handleEmpInfoCatScoreChange(category, val) {
-  const num = parseInt(val) || 0;
-  state.empInfo.categoryScores[category] = num;
-  const valEl = document.getElementById(`emp-info-cat-val-${category}`);
-  if (valEl) valEl.textContent = `${num}%`;
+  // Assessment marks are static and cannot be modified by the employee
 }
 
 function renderEmpInfoSkillsCategoryTabs() {
   const container = document.getElementById('emp-info-skills-category-tabs');
   if (!container) return;
 
-  const catalog = state.hrAI.itSkillsCatalog || {};
+  const catalog = state.hrAI.itSkillsCatalog || DEFAULT_IT_SKILLS_CATALOG || {};
   const categories = ['All', ...Object.keys(catalog)];
 
   container.innerHTML = categories.map(cat => `
-    <button type="button" class="category-pill-btn ${state.empInfo.activeSkillCategory === cat ? 'active' : ''}" onclick="setEmpInfoSkillsCategory('${cat}')">
+    <button type="button" class="category-pill-btn ${state.empInfo.activeSkillCategory === cat ? 'active' : ''}" onclick="setEmpInfoSkillsCategory('${cat.replace(/'/g, "\\'")}')">
       ${cat}
     </button>
   `).join('');
@@ -4137,7 +5326,7 @@ function renderEmpInfoSkillsCloud() {
     countBadge.textContent = `${state.empInfo.selectedSkills.size} Skills Selected`;
   }
 
-  const catalog = state.hrAI.itSkillsCatalog || {};
+  const catalog = state.hrAI.itSkillsCatalog || DEFAULT_IT_SKILLS_CATALOG || {};
   let skillsToDisplay = [];
 
   if (state.empInfo.activeSkillCategory === 'All') {
@@ -4154,14 +5343,14 @@ function renderEmpInfoSkillsCloud() {
   }
 
   if (skillsToDisplay.length === 0) {
-    cloud.innerHTML = `<div style="font-size: 0.78rem; color: #94a3b8; padding: 10px;">No skills match your search.</div>`;
+    cloud.innerHTML = `<div style="font-size: 0.78rem; color: #94a3b8; padding: 10px;">No skills match your search. Try searching for languages, databases, or frameworks.</div>`;
     return;
   }
 
   cloud.innerHTML = skillsToDisplay.map(skill => {
     const isSelected = state.empInfo.selectedSkills.has(skill);
     return `
-      <span class="it-skill-pill ${isSelected ? 'selected' : ''}" onclick="toggleEmpInfoSkill('${skill.replace(/'/g, "\\'")}')">
+      <span class="it-skill-pill ${isSelected ? 'selected' : ''}" onclick="toggleEmpInfoSkill('${skill.replace(/'/g, "\\'")}')" title="${isSelected ? 'Click to deselect' : 'Click to select'} ${skill}">
         ${skill} ${isSelected ? '✓' : '+'}
       </span>
     `;
@@ -4182,7 +5371,7 @@ function toggleEmpInfoSkill(skillName) {
 function autoSelectEmpInfoRoleSkills() {
   const core = [
     "Python", "Docker", "PostgreSQL", "React", "AWS", 
-    "Git & GitHub", "REST APIs", "Linux / Unix", "CI/CD Pipelines", "System Architecture"
+    "Git & GitHub", "REST APIs", "Linux Admin", "CI/CD Pipelines", "System Design", "SQL"
   ];
   core.forEach(s => state.empInfo.selectedSkills.set(s, 85));
   renderEmpInfoSkillsCloud();
@@ -4190,6 +5379,71 @@ function autoSelectEmpInfoRoleSkills() {
   renderEmpInfoSummary(state.empInfo.currentEmployee);
   showToast("Added core IT skill set with 85% baseline proficiency", "info");
 }
+
+function selectAllSkillsInCurrentCategory() {
+  const catalog = state.hrAI.itSkillsCatalog || DEFAULT_IT_SKILLS_CATALOG || {};
+  let skillsToSelect = [];
+
+  if (state.empInfo.activeSkillCategory === 'All') {
+    Object.values(catalog).forEach(arr => {
+      skillsToSelect.push(...arr);
+    });
+    skillsToSelect = Array.from(new Set(skillsToSelect));
+  } else {
+    skillsToSelect = catalog[state.empInfo.activeSkillCategory] || [];
+  }
+
+  if (skillsToSelect.length === 0) {
+    showToast("No skills to select in this category", "info");
+    return;
+  }
+
+  let newlyAdded = 0;
+  skillsToSelect.forEach(sk => {
+    if (!state.empInfo.selectedSkills.has(sk)) {
+      state.empInfo.selectedSkills.set(sk, 85);
+      newlyAdded++;
+    }
+  });
+
+  renderEmpInfoSkillsCloud();
+  renderEmpInfoSelectedSkillsList();
+  renderEmpInfoSummary(state.empInfo.currentEmployee);
+  showToast(`Selected all ${skillsToSelect.length} skills in "${state.empInfo.activeSkillCategory}" (${newlyAdded} newly added)`, "success");
+}
+window.selectAllSkillsInCurrentCategory = selectAllSkillsInCurrentCategory;
+
+function addCustomEmpInfoSkill() {
+  const input = document.getElementById('emp-info-custom-skill-input');
+  if (!input) return;
+  const raw = input.value.trim();
+  if (!raw) {
+    showToast("Please enter a skill name to add", "info");
+    return;
+  }
+
+  const skillName = raw.charAt(0).toUpperCase() + raw.slice(1);
+  state.empInfo.selectedSkills.set(skillName, 85);
+
+  if (!state.hrAI.itSkillsCatalog) {
+    state.hrAI.itSkillsCatalog = { ...DEFAULT_IT_SKILLS_CATALOG };
+  }
+  const targetCategory = state.empInfo.activeSkillCategory !== 'All' ? state.empInfo.activeSkillCategory : 'Custom Skills';
+  if (!state.hrAI.itSkillsCatalog[targetCategory]) {
+    state.hrAI.itSkillsCatalog[targetCategory] = [];
+  }
+  if (!state.hrAI.itSkillsCatalog[targetCategory].includes(skillName)) {
+    state.hrAI.itSkillsCatalog[targetCategory].push(skillName);
+  }
+
+  input.value = '';
+  renderEmpInfoSkillsCategoryTabs();
+  renderEmpInfoSkillsCloud();
+  renderEmpInfoSelectedSkillsList();
+  renderEmpInfoSummary(state.empInfo.currentEmployee);
+  showToast(`Added custom skill: "${skillName}" with 85% proficiency`, "success");
+}
+window.addCustomEmpInfoSkill = addCustomEmpInfoSkill;
 
 function clearEmpInfoSkills() {
   state.empInfo.selectedSkills.clear();
@@ -4594,8 +5848,9 @@ function removeEmpInfoResume() {
 
 // Persistence Save and Reset Handlers
 async function saveEmployeeInfoData(silent = false) {
-  const empId = state.empInfo.selectedEmployeeId;
+  const empId = state.empInfo.selectedEmployeeId || state.activeEmployeeId || (state.employees[0]?.id || 'EMP-001');
   if (!empId) return null;
+  state.empInfo.selectedEmployeeId = empId;
 
   const skillsObj = {};
   for (let [k, v] of state.empInfo.selectedSkills) {
@@ -4617,10 +5872,10 @@ async function saveEmployeeInfoData(silent = false) {
     },
     education: education,
     bio: bio,
-    assessment_scores: {
+    assessment_scores: state.empInfo.currentEmployee?.assessment_marks || state.empInfo.currentEmployee?.assessment_scores || {
       completed: state.empInfo.assessmentCompleted,
       score_pct: state.empInfo.assessmentScore,
-      correct_count: Math.round((state.empInfo.assessmentScore / 100) * 20),
+      correct_count: state.empInfo.assessmentCorrectCount || Math.round((state.empInfo.assessmentScore / 100) * 20),
       total_questions: 20,
       category_scores: state.empInfo.categoryScores
     }
@@ -4628,17 +5883,32 @@ async function saveEmployeeInfoData(silent = false) {
 
   try {
     const res = await api.updateEmployeeInfo(empId, payload);
-    if (!silent) {
-      showToast(`💾 Persisted data for ${state.empInfo.currentEmployee?.name || empId} to database!`, "success");
-    }
     const emp = state.employees.find(e => e.id === empId);
     if (emp) {
       emp.experience_years = payload.experience_years;
       emp.skills = payload.skills;
       emp.certifications = payload.certifications;
-      emp.assessment_scores = payload.assessment_scores;
+      emp.resume = payload.resume;
+      emp.education = payload.education;
+      emp.bio = payload.bio;
+      emp.assessment_scores = (res && res.employee && res.employee.assessment_scores) 
+        ? res.employee.assessment_scores 
+        : payload.assessment_scores;
+      if (emp.assessment_scores?.completed) {
+        emp.assessment_score = emp.assessment_scores.score_pct;
+      } else {
+        emp.assessment_score = 0;
+      }
     }
-    renderEmpInfoSummary(state.empInfo.currentEmployee);
+    renderEmpInfoSummary(state.empInfo.currentEmployee || emp);
+    renderEmployeeSelfView();
+    renderHREmployeeSubmittedInfoTable();
+    if (state.hrAI?.selectedEmployeeId === empId) {
+      loadHRAIEmployeeDossier(empId);
+    }
+    if (!silent) {
+      showToast(`💾 Saved information for ${emp?.name || empId}! Successfully updated on HR Dashboard.`, "success");
+    }
     return res;
   } catch (error) {
     console.error("Failed to persist employee info:", error);
@@ -4697,44 +5967,9 @@ async function saveAndProceedToAIAnalyzer() {
   const emp = state.employees.find(e => e.id === empId) || state.empInfo.currentEmployee;
   const empName = emp?.name || empId;
 
-  // Determine the eligible succession role for this employee
-  const eligibleRoleId = getEligibleRoleForEmployee(emp);
-  const eligibleRole = state.leadershipRoles.find(r => r.id === eligibleRoleId) || { title: eligibleRoleId, id: eligibleRoleId };
-
-  showToast(`✓ Certificate confirmed as Original! Proceeding to AI Role Analyzer for eligible role: ${eligibleRole.title}...`, "success", 4000);
-
-  // Navigate to AI Role Analyzer tab
-  navigateToTab('tab-ai-matcher');
-
-  // Set candidate in AI analyzer
-  state.hrAI.selectedEmployeeId = empId;
-  const aiEmpSelect = document.getElementById('hr-ai-select-employee');
-  if (aiEmpSelect) {
-    aiEmpSelect.value = empId;
-  }
-
-  // Configure target role to candidate's eligible role
-  state.hrAI.targetRoleId = eligibleRoleId;
-  const hrTargetRoleSelect = document.getElementById('hr-ai-target-role');
-  if (hrTargetRoleSelect) {
-    hrTargetRoleSelect.value = eligibleRoleId;
-  }
-  const presetRoleSelect = document.getElementById('ai-select-preset-role');
-  if (presetRoleSelect) {
-    presetRoleSelect.value = eligibleRoleId;
-  }
-  const top3RoleSelect = document.getElementById('ai-top3-target-role');
-  if (top3RoleSelect) {
-    top3RoleSelect.value = eligibleRoleId;
-  }
-
-  updateHRAITargetRoleBenchmarks();
-
-  // Load candidate dossier and trigger AI suitability & eligibility analysis
-  await loadHRAIEmployeeDossier(empId);
-  setTimeout(() => {
-    executeHRAIEligibilityAnalysis(false);
-  }, 350);
+  // Certificate verified as original! Proceed to the unified AI Role Analyzer
+  showToast(`✓ Certificate confirmed as Original! Proceeding to Analyse using AI...`, "success", 4000);
+  await selectAndAnalyzeCandidateInAI(empId);
   return true;
 }
 
@@ -4750,14 +5985,12 @@ async function resetCurrentEmpInfoData() {
     resume: null,
     education: "",
     bio: "",
-    assessment_scores: {
+    assessment_scores: state.empInfo.currentEmployee?.assessment_marks || state.empInfo.currentEmployee?.assessment_scores || {
       completed: false,
       score_pct: 0,
       correct_count: 0,
       total_questions: 20,
-      category_scores: {
-        "Python": 0, "Java": 0, "C": 0, "DBMS": 0, "Other Tech": 0, "Communication": 0, "Aptitude": 0
-      }
+      category_scores: {}
     }
   };
 

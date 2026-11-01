@@ -26,6 +26,7 @@ from backend.ai_assistant import (
     execute_chat_turn,
     resolve_employee_id,
     resolve_role_id,
+    get_ai_config,
     LEADSYNC_TOOLS,
     TOOL_DISPATCH
 )
@@ -261,7 +262,7 @@ class TestLeadSyncAIAgent(unittest.TestCase):
         mock_completion_2 = MagicMock(choices=[mock_choice_step2])
         mock_completion_3 = MagicMock(choices=[mock_choice_step3])
 
-        with patch.dict(os.environ, {"FREELLMAPI_API_KEY": "test-key-mock"}):
+        with patch.dict(os.environ, {"AI_PROVIDER": "freellmapi", "FREELLMAPI_API_KEY": "test-key-mock", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}):
             with patch("openai.resources.chat.completions.Completions.create", side_effect=[
                 mock_completion_1,
                 mock_completion_2,
@@ -288,7 +289,7 @@ class TestLeadSyncAIAgent(unittest.TestCase):
         mock_choice.message.tool_calls = None
         mock_completion = MagicMock(choices=[mock_choice])
 
-        with patch.dict(os.environ, {"FREELLMAPI_API_KEY": "test-key-mock"}):
+        with patch.dict(os.environ, {"AI_PROVIDER": "freellmapi", "FREELLMAPI_API_KEY": "test-key-mock", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}):
             with patch("openai.resources.chat.completions.Completions.create", return_value=mock_completion):
                 response = self.client.post(
                     "/api/ai/chat",
@@ -334,6 +335,163 @@ class TestLeadSyncAIAgent(unittest.TestCase):
         res_idx = self.client.get("/")
         self.assertEqual(res_idx.status_code, 200)
         print("  [PASS] Non-regression verified: all 6 existing dashboard endpoints intact.")
+
+    def test_12_ai_provider_resolution(self):
+        """Verify intelligent AI provider resolution between Gemini, OpenAI, and FreeLLMAPI."""
+        # Case A: GEMINI_API_KEY configured -> auto-detects Gemini cloud provider
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-gemini-key", "FREELLMAPI_API_KEY": "local-key"}, clear=False):
+            cfg = get_ai_config()
+            self.assertEqual(cfg["provider"], "gemini")
+            self.assertEqual(cfg["provider_name"], "Google Gemini")
+            self.assertEqual(cfg["api_key"], "test-gemini-key")
+            self.assertIn("generativelanguage.googleapis.com", cfg["base_url"])
+
+        # Case B: GOOGLE_API_KEY fallback -> auto-detects Gemini
+        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key", "GEMINI_API_KEY": "", "AI_PROVIDER": ""}, clear=False):
+            cfg = get_ai_config()
+            self.assertEqual(cfg["provider"], "gemini")
+            self.assertEqual(cfg["api_key"], "test-google-key")
+
+        # Case C: Explicit AI_PROVIDER=gemini on Render without key yet
+        with patch.dict(os.environ, {"AI_PROVIDER": "gemini", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False):
+            cfg = get_ai_config()
+            self.assertEqual(cfg["provider"], "gemini")
+            self.assertEqual(cfg["api_key"], "")
+
+        # Case D: Local development with FREELLMAPI_API_KEY and no cloud key
+        with patch.dict(os.environ, {"FREELLMAPI_API_KEY": "mock-freellm-key", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": "", "AI_PROVIDER": "", "RENDER": ""}, clear=False):
+            cfg = get_ai_config()
+            self.assertEqual(cfg["provider"], "freellmapi")
+            self.assertEqual(cfg["provider_name"], "FreeLLMAPI Unified Gateway")
+            self.assertEqual(cfg["api_key"], "mock-freellm-key")
+            self.assertIn("127.0.0.1:31415", cfg["base_url"])
+        print("  [PASS] AI provider resolution verified across Gemini cloud and FreeLLMAPI local setups.")
+
+    def test_13_gemini_openai_execution(self):
+        """Verify agent execution loop using Gemini provider configuration."""
+        mock_candidate = MagicMock()
+        mock_candidate.content.parts = [MagicMock(text="Google Gemini analysis confirms candidate eligibility.")]
+        mock_response = MagicMock(
+            candidates=[mock_candidate],
+            function_calls=None,
+            text="Google Gemini analysis confirms candidate eligibility."
+        )
+
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "mock-gemini-key", "AI_PROVIDER": "gemini"}):
+            with patch("backend.ai_assistant.get_cached_gemini_client") as mock_get_client:
+                mock_client = MagicMock()
+                mock_client.models.generate_content.return_value = mock_response
+                mock_get_client.return_value = mock_client
+                res = execute_chat_turn(
+                    messages=[ChatMessage(role="user", content="Analyze candidate suitability.")],
+                    include_hr_context=True,
+                    user_role="hr"
+                )
+                self.assertTrue(res["success"])
+                self.assertIn("Google Gemini", res["reply"])
+        print("  [PASS] Gemini provider execution verified with native SDK mock.")
+
+    def test_14_ai_status_endpoint(self):
+        """Verify /api/ai/status endpoint safely reveals provider configuration without leaking keys."""
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "secret-gemini-key", "AI_PROVIDER": "gemini"}):
+            res = self.client.get("/api/ai/status")
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["provider"], "gemini")
+            self.assertEqual(data["provider_name"], "Google Gemini")
+            self.assertTrue(data["is_configured"])
+            self.assertEqual(data["mode"], "cloud")
+            # Crucial: verify raw API key is NEVER exposed in the JSON response
+            self.assertNotIn("secret-gemini-key", str(data))
+        print("  [PASS] /api/ai/status endpoint verified (provider revealed, key never leaked).")
+
+    def test_15_actionable_error_messages(self):
+        """Verify clear and actionable error messages when API keys are unconfigured."""
+        # Unconfigured Gemini
+        with patch.dict(os.environ, {"AI_PROVIDER": "gemini", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}):
+            res = execute_chat_turn(
+                messages=[ChatMessage(role="user", content="Hello")],
+                include_hr_context=False,
+                user_role="hr"
+            )
+            self.assertFalse(res["success"])
+            self.assertIn("GEMINI_API_KEY environment variable is not configured", res["error"])
+
+        # Unconfigured FreeLLMAPI
+        with patch.dict(os.environ, {"AI_PROVIDER": "freellmapi", "FREELLMAPI_API_KEY": "", "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}):
+            res = execute_chat_turn(
+                messages=[ChatMessage(role="user", content="Hello")],
+                include_hr_context=False,
+                user_role="hr"
+            )
+            self.assertFalse(res["success"])
+            self.assertIn("FREELLMAPI_API_KEY", res["error"])
+    def test_16_gemini_key_validation_unsuccessful(self):
+        """Verify POST /api/ai/set-gemini-key rejects invalid keys when called by authorized HR."""
+        headers = {"X-LeadSync-Role": "hr", "X-LeadSync-Email": "hr@leadsync.com"}
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}):
+            from backend.app import _gemini_validation_cache
+            _gemini_validation_cache.clear()
+            res = self.client.post("/api/ai/set-gemini-key", json={"api_key": "free_bogus_key_123"}, headers=headers)
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertFalse(data["success"])
+            self.assertEqual(data.get("status"), "invalid")
+            self.assertIn("Google rejected this API key", data["message"])
+            # Verify secret is never echoed back
+            self.assertNotIn("free_bogus_key_123", str(data))
+
+            # Check status endpoint confirms unconfigured/invalid
+            status_res = self.client.get("/api/ai/gemini-status")
+            self.assertFalse(status_res.json()["gemini_configured"])
+        print("  [PASS] Unsuccessful key validation path verified: rejected with helpful guidance, zero secrets leaked.")
+
+    def test_17_gemini_key_validation_successful(self):
+        """Verify POST /api/ai/set-gemini-key activates and caches valid keys when called by authorized HR."""
+        from unittest.mock import patch
+        headers = {"X-LeadSync-Role": "hr", "X-LeadSync-Email": "hr@leadsync.com"}
+        # Patch validate_gemini_key and simulate cloud/isolated environment so local .env is not altered
+        with patch.dict(os.environ, {"RENDER": "true"}):
+            with patch("backend.app.validate_gemini_key", return_value=(True, "")):
+                res = self.client.post("/api/ai/set-gemini-key", json={"api_key": "valid_mock_key_abc"}, headers=headers)
+                self.assertEqual(res.status_code, 200)
+                data = res.json()
+                self.assertTrue(data["success"])
+                self.assertEqual(data.get("status"), "active")
+                self.assertIn("validated and activated", data["message"])
+                self.assertNotIn("valid_mock_key_abc", str(data))
+
+                # Status endpoint now reports active
+                status_res = self.client.get("/api/ai/gemini-status")
+                status_data = status_res.json()
+                self.assertTrue(status_data["gemini_configured"])
+                self.assertEqual(status_data["status"], "active")
+        print("  [PASS] Successful key validation path verified: activated in memory, status confirmed, zero secrets leaked.")
+
+    def test_18_gemini_key_authorization_guard(self):
+        """Verify POST /api/ai/set-gemini-key rejects unauthenticated visitors or non-admin roles with 403."""
+        # Case A: No authentication headers
+        res_no_auth = self.client.post("/api/ai/set-gemini-key", json={"api_key": "any_key"})
+        self.assertEqual(res_no_auth.status_code, 403)
+        self.assertIn("Forbidden", res_no_auth.json().get("detail", ""))
+
+        # Case B: Employee role attempt
+        res_emp = self.client.post(
+            "/api/ai/set-gemini-key",
+            json={"api_key": "any_key"},
+            headers={"X-LeadSync-Role": "employee", "X-LeadSync-Email": "emp@leadsync.com"}
+        )
+        self.assertEqual(res_emp.status_code, 403)
+
+        # Case C: Guest / Unknown role attempt
+        res_guest = self.client.post(
+            "/api/ai/set-gemini-key",
+            json={"api_key": "any_key"},
+            headers={"X-LeadSync-Role": "visitor"}
+        )
+        self.assertEqual(res_guest.status_code, 403)
+        print("  [PASS] Authorization security guard verified: unauthenticated visitors and employee roles blocked with 403.")
 
 
 if __name__ == "__main__":

@@ -1,26 +1,100 @@
 /**
  * LeadSync Dashboard API Client
  * Connects the frontend SPA to Python 3.14 FastAPI backend
+ * Pure Cookie-Based HttpOnly Authentication (Same-Origin)
  */
 
 const API_BASE = window.location.origin;
 
+async function apiFetch(url, options = {}) {
+  const opt = { ...options };
+  opt.credentials = 'same-origin';
+  const res = await fetch(url, opt);
+  return res;
+}
+
 const api = {
+  // Google Identity Services & Auth Endpoints
+  async getAuthConfig() {
+    const res = await fetch(`${API_BASE}/api/auth/config?_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache, no-store, must-revalidate" }
+    });
+    if (!res.ok) throw new Error("Failed to load authentication configuration");
+    return await res.json();
+  },
+
+  async verifyGoogleToken(credential, targetRole) {
+    const res = await fetch(`${API_BASE}/api/auth/google/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ credential, target_role: targetRole })
+    });
+    if (!res.ok) {
+      let errDetail = `Authentication failed (${res.status})`;
+      try {
+        const data = await res.json();
+        if (data.detail) errDetail = data.detail;
+      } catch (_) {}
+      const err = new Error(errDetail);
+      err.status = res.status;
+      throw err;
+    }
+    const data = await res.json();
+    const user = data.user || (data.email ? {
+      role: data.role,
+      email: data.email,
+      name: data.name,
+      picture: data.picture || ''
+    } : null);
+    if (user) {
+      if (!data.user) data.user = user;
+      localStorage.setItem('leadsync_auth_role', user.role);
+      localStorage.setItem('leadsync_auth_email', user.email);
+    }
+    return data;
+  },
+
+  async checkSession() {
+    const res = await apiFetch(`${API_BASE}/api/auth/me`);
+    if (!res.ok) return { authenticated: false };
+    const data = await res.json();
+    if (data.authenticated && !data.user && data.email) {
+      data.user = {
+        role: data.role,
+        email: data.email,
+        name: data.name,
+        picture: data.picture || ''
+      };
+    }
+    return data;
+  },
+
+  async logout() {
+    try {
+      await apiFetch(`${API_BASE}/api/auth/logout`, { method: "POST" });
+    } catch (_) {}
+    localStorage.removeItem('leadsync_auth_role');
+    localStorage.removeItem('leadsync_auth_email');
+    return { success: true };
+  },
+
   // Employee Endpoints
   async getEmployees() {
-    const res = await fetch(`${API_BASE}/api/employees`);
+    const res = await apiFetch(`${API_BASE}/api/employees`);
     if (!res.ok) throw new Error("Failed to load employees");
     return await res.json();
   },
 
   async getEmployeeProfile(employeeId) {
-    const res = await fetch(`${API_BASE}/api/employees/${employeeId}`);
+    const res = await apiFetch(`${API_BASE}/api/employees/${employeeId}`);
     if (!res.ok) throw new Error(`Failed to load profile for ${employeeId}`);
     return await res.json();
   },
 
   async addEmployee(empData) {
-    const res = await fetch(`${API_BASE}/api/employees`, {
+    const res = await apiFetch(`${API_BASE}/api/employees`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(empData)
@@ -30,12 +104,19 @@ const api = {
   },
 
   async updateEmployeeInfo(employeeId, data) {
-    const res = await fetch(`${API_BASE}/api/employees/${employeeId}/update-info`, {
+    const res = await apiFetch(`${API_BASE}/api/employees/${employeeId}/update-info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to update and persist employee info");
+    if (!res.ok) {
+      let errDetail = "Failed to update and persist employee info";
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) errDetail = errJson.detail;
+      } catch (_) {}
+      throw new Error(errDetail);
+    }
     return await res.json();
   },
 
@@ -45,13 +126,13 @@ const api = {
 
   // Assessment Endpoints
   async getAssessments() {
-    const res = await fetch(`${API_BASE}/api/assessments`);
+    const res = await apiFetch(`${API_BASE}/api/assessments`);
     if (!res.ok) throw new Error("Failed to load assessments");
     return await res.json();
   },
 
   async createAssessment(asmData) {
-    const res = await fetch(`${API_BASE}/api/assessments`, {
+    const res = await apiFetch(`${API_BASE}/api/assessments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(asmData)
@@ -64,13 +145,13 @@ const api = {
     const url = seed 
       ? `${API_BASE}/api/assessments/${assessmentId}/questions?seed=${seed}`
       : `${API_BASE}/api/assessments/${assessmentId}/questions`;
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (!res.ok) throw new Error("Failed to load assessment questions");
     return await res.json();
   },
 
   async submitAssessment(payload) {
-    const res = await fetch(`${API_BASE}/api/assessments/submit`, {
+    const res = await apiFetch(`${API_BASE}/api/assessments/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -81,26 +162,26 @@ const api = {
 
   // Dashboard Results Endpoints
   async getTop3Results() {
-    const res = await fetch(`${API_BASE}/api/results/top3`);
+    const res = await apiFetch(`${API_BASE}/api/results/top3`);
     if (!res.ok) throw new Error("Failed to load HR top 3 results");
     return await res.json();
   },
 
   async getManagerResults() {
-    const res = await fetch(`${API_BASE}/api/results/manager`);
+    const res = await apiFetch(`${API_BASE}/api/results/manager`);
     if (!res.ok) throw new Error("Failed to load manager results");
     return await res.json();
   },
 
   // Leadership Succession Roles & Suitability Endpoints
   async getLeadershipRoles() {
-    const res = await fetch(`${API_BASE}/api/roles`);
+    const res = await apiFetch(`${API_BASE}/api/roles`);
     if (!res.ok) throw new Error("Failed to load leadership roles");
     return await res.json();
   },
 
   async evaluateSuitability(payload) {
-    const res = await fetch(`${API_BASE}/api/suitability/evaluate`, {
+    const res = await apiFetch(`${API_BASE}/api/suitability/evaluate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -110,20 +191,20 @@ const api = {
   },
 
   async getSuccessionMatrix() {
-    const res = await fetch(`${API_BASE}/api/succession/matrix`);
+    const res = await apiFetch(`${API_BASE}/api/succession/matrix`);
     if (!res.ok) throw new Error("Failed to load succession matrix");
     return await res.json();
   },
 
   async resetData() {
-    const res = await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+    const res = await apiFetch(`${API_BASE}/api/reset`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to reset database");
     return await res.json();
   },
 
   // --- LeadSync AI Candidate Matching & Role Recommendation ---
   async matchRole(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/match-role`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/match-role`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -136,13 +217,13 @@ const api = {
     const url = dept 
       ? `${API_BASE}/api/ai/quick-match/${roleId}?department_filter=${encodeURIComponent(dept)}`
       : `${API_BASE}/api/ai/quick-match/${roleId}`;
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (!res.ok) throw new Error("Failed to load quick AI match");
     return await res.json();
   },
 
   async parseJobDescription(jdText) {
-    const res = await fetch(`${API_BASE}/api/ai/parse-job-description`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/parse-job-description`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ job_description_text: jdText })
@@ -152,7 +233,7 @@ const api = {
   },
 
   async appointCandidate(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/appoint`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/appoint`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -162,26 +243,26 @@ const api = {
   },
 
   async getAppointments() {
-    const res = await fetch(`${API_BASE}/api/ai/appointments`);
+    const res = await apiFetch(`${API_BASE}/api/ai/appointments`);
     if (!res.ok) throw new Error("Failed to load appointments");
     return await res.json();
   },
 
   // --- Multi-Modal HR AI Analysing Endpoints ---
   async getITSkillsCatalog() {
-    const res = await fetch(`${API_BASE}/api/ai/skills-catalog`);
+    const res = await apiFetch(`${API_BASE}/api/ai/skills-catalog`);
     if (!res.ok) throw new Error("Failed to load IT skills catalog");
     return await res.json();
   },
 
   async getEmployeeDossier(employeeId) {
-    const res = await fetch(`${API_BASE}/api/ai/employee-dossier/${employeeId}`);
+    const res = await apiFetch(`${API_BASE}/api/ai/employee-dossier/${employeeId}`);
     if (!res.ok) throw new Error(`Failed to load dossier for ${employeeId}`);
     return await res.json();
   },
 
   async uploadAsset(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/upload-asset`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/upload-asset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -191,7 +272,7 @@ const api = {
   },
 
   async verifyCertificate(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/verify-certificate`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/verify-certificate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -201,23 +282,32 @@ const api = {
   },
 
   async getGeminiStatus() {
-    const res = await fetch(`${API_BASE}/api/ai/gemini-status`);
+    const res = await apiFetch(`${API_BASE}/api/ai/gemini-status`);
     if (!res.ok) return { gemini_configured: false };
     return await res.json();
   },
 
   async setGeminiKey(apiKey) {
-    const res = await fetch(`${API_BASE}/api/ai/set-gemini-key`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/set-gemini-key`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ api_key: apiKey })
     });
-    if (!res.ok) throw new Error("Failed to configure Gemini API Key");
+    if (!res.ok) {
+      let errDetail = `Server error (${res.status})`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) errDetail = errJson.detail;
+      } catch (_) {}
+      throw new Error(errDetail);
+    }
     return await res.json();
   },
 
   async analyzeEligibility(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/analyze-eligibility`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/analyze-eligibility`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -226,16 +316,12 @@ const api = {
     return await res.json();
   },
 
-  // FreeLLMAPI AI Assistant Endpoints
+  // FreeLLMAPI / Gemini AI Assistant Endpoints
   async sendAIChat(messages, includeHrContext = true) {
-    const role = localStorage.getItem('leadsync_auth_role') || 'hr';
-    const email = localStorage.getItem('leadsync_auth_email') || '';
-    const res = await fetch(`${API_BASE}/api/ai/chat`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/chat`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "X-LeadSync-Role": role,
-        "X-LeadSync-Email": email
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         messages: messages,
@@ -272,18 +358,13 @@ const api = {
   },
 
   async getAIMetricsSummary() {
-    const role = localStorage.getItem('leadsync_auth_role') || 'hr';
-    const res = await fetch(`${API_BASE}/api/ai/metrics/summary`, {
-      headers: { "X-LeadSync-Role": role }
-    });
+    const res = await apiFetch(`${API_BASE}/api/ai/metrics/summary`);
     if (!res.ok) throw new Error("Failed to load AI metrics summary");
     return await res.json();
   },
 
   async resetData() {
-    const res = await fetch(`${API_BASE}/api/reset`, {
-      method: "POST"
-    });
+    const res = await apiFetch(`${API_BASE}/api/reset`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to reset database seeds");
     return await res.json();
   },
@@ -293,7 +374,7 @@ const api = {
   },
 
   async resetAssessments() {
-    const res = await fetch(`${API_BASE}/api/assessments/reset`, {
+    const res = await apiFetch(`${API_BASE}/api/assessments/reset`, {
       method: "POST"
     });
     if (!res.ok) throw new Error("Failed to reset assessments");
@@ -301,7 +382,7 @@ const api = {
   },
 
   async analyzeTop3ForRole(payload) {
-    const res = await fetch(`${API_BASE}/api/ai/analyze-top3-for-role`, {
+    const res = await apiFetch(`${API_BASE}/api/ai/analyze-top3-for-role`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -312,4 +393,3 @@ const api = {
 };
 
 window.api = api;
-

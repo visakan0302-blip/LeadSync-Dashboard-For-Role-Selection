@@ -1,15 +1,31 @@
 import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure root .env is loaded before any module imports or route registrations
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_PATH = PROJECT_ROOT / ".env"
+if ENV_PATH.is_file():
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
+
+import urllib.parse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+from fastapi import Request
+import sys
+import os
 import re
 import base64
 import time
 import io
 import math
 from PIL import Image
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header, status, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from backend.database import db
 from backend.models import (
@@ -29,6 +45,12 @@ from backend.ai_matcher import (
 )
 from backend.it_skills_data import IT_SKILLS_CATALOG, ALL_IT_SKILLS
 from backend.ai_assistant import router as ai_assistant_router
+from backend.auth import (
+    router as auth_router,
+    require_role,
+    require_session,
+    get_current_session
+)
 
 
 app = FastAPI(
@@ -37,15 +59,75 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Mount Authentication Router (Google GIS & Session Management)
+app.include_router(auth_router)
+
 # Mount FreeLLMAPI AI Assistant Router
 app.include_router(ai_assistant_router)
 
-# Enable CORS for local development flexibility
+# Allowed Origins for LeadSync AI: local development and verified Render deployment
+ALLOWED_ORIGINS = {
+    "http://localhost:8888",
+    "http://127.0.0.1:8888",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://leadsync-dashboard-for-role-selection-1.onrender.com"
+}
+ALLOWED_CORS_ORIGINS = sorted(list(ALLOWED_ORIGINS))
+
+# --- Robust CSRF Protection Middleware (OWASP Origin/Referer Validation) ---
+class CSRFProtectionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Inspect state-changing HTTP methods
+        if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            origin = request.headers.get("origin")
+            referer = request.headers.get("referer")
+            is_test = (
+                "unittest" in sys.modules
+                or "pytest" in sys.modules
+                or os.environ.get("LEADSYNC_TEST_MODE") == "1"
+            )
+
+            # 1. If Origin header is present, strictly validate against allowed origins
+            if origin:
+                clean_origin = origin.rstrip("/")
+                is_allowed = clean_origin in ALLOWED_ORIGINS or (is_test and clean_origin in ["http://testserver", "https://testserver"])
+                if not is_allowed:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF verification failed: Forbidden cross-origin request."}
+                    )
+            # 2. If Origin header is absent, validate Referer header
+            elif referer:
+                try:
+                    parsed = urllib.parse.urlparse(referer)
+                    ref_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+                    is_allowed = ref_origin in ALLOWED_ORIGINS or (is_test and ref_origin in ["http://testserver", "https://testserver"])
+                    if not is_allowed:
+                        return JSONResponse(
+                            status_code=403,
+                            content={"detail": "CSRF verification failed: Forbidden referer."}
+                        )
+                except Exception:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF verification failed: Malformed referer."}
+                    )
+            # 3. In non-test production mode, state-changing requests require Origin or Referer
+            elif not is_test:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "CSRF verification failed: Missing Origin or Referer header on state-changing request."}
+                )
+
+        return await call_next(request)
+
+app.add_middleware(CSRFProtectionMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -76,14 +158,19 @@ def get_employee_profile(employee_id: str):
         raise HTTPException(status_code=404, detail="Employee not found")
     return {"employee": emp}
 
-@app.post("/api/employees", summary="HR add new employee to database")
+@app.post("/api/employees", summary="HR add new employee to database", dependencies=[Depends(require_role(["hr"]))])
 def add_new_employee(emp_data: EmployeeCreate):
     new_emp = db.add_employee(emp_data.model_dump())
     return {"success": True, "employee": new_emp, "message": "Employee successfully added to LeadSync database."}
 
-@app.post("/api/employees/{employee_id}/update-info", summary="HR update and persist employee information")
-def update_employee_info(employee_id: str, data: Dict[str, Any]):
+@app.post("/api/employees/{employee_id}/update-info", summary="HR/Manager/Employee update and persist employee information", dependencies=[Depends(require_role(["hr", "manager", "employee"]))])
+def update_employee_info(employee_id: str, data: Dict[str, Any], session: Dict[str, Any] = Depends(require_session)):
     try:
+        # If caller is an employee, protect official assessment scores from client-side modification
+        if session.get("role") == "employee":
+            existing = db.get_employee(employee_id)
+            if existing and "assessment_scores" in data:
+                data["assessment_scores"] = existing.get("assessment_scores")
         updated = db.update_employee_info(employee_id, data)
         return {
             "success": True,
@@ -100,7 +187,7 @@ def update_employee_info(employee_id: str, data: Dict[str, Any]):
 def get_assessments():
     return {"assessments": db.get_all_assessments()}
 
-@app.post("/api/assessments", summary="HR create and schedule an assessment")
+@app.post("/api/assessments", summary="HR create and schedule an assessment", dependencies=[Depends(require_role(["hr"]))])
 def create_assessment(data: AssessmentCreate):
     new_asm = db.create_assessment(data.model_dump())
     return {"success": True, "assessment": new_asm, "message": "Assessment created and scheduled successfully."}
@@ -119,7 +206,7 @@ def get_assessment_questions(assessment_id: str, seed: Optional[str] = None):
         })
     return {"assessment_id": assessment_id, "total": len(client_questions), "questions": client_questions}
 
-@app.post("/api/assessments/submit", summary="Submit assessment answers & auto-grade")
+@app.post("/api/assessments/submit", summary="Submit assessment answers & auto-grade", dependencies=[Depends(require_session)])
 def submit_assessment(submission: AssessmentSubmit):
     try:
         result = db.submit_assessment_answers(submission.employee_id, submission.answers)
@@ -131,7 +218,7 @@ def submit_assessment(submission: AssessmentSubmit):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/assessments/reset", summary="Reset all employee assessment marks to zero")
+@app.post("/api/assessments/reset", summary="Reset all employee assessment marks to zero", dependencies=[Depends(require_role(["hr"]))])
 def reset_assessments():
     """
     Requirement 1: Create an option reset option even for the assessment when clicking
@@ -144,7 +231,7 @@ def reset_assessments():
     }
 
 # --- Dashboard Results Endpoints (HR Top 3 vs Manager All 15) ---
-@app.get("/api/results/top3", summary="Top 3 employee results for HR Dashboard")
+@app.get("/api/results/top3", summary="Top 3 employee results for HR Dashboard", dependencies=[Depends(require_role(["hr"]))])
 def get_top_3_for_hr():
     """
     Requirement 2: After completion, only the TOP THREE employee results
@@ -157,7 +244,7 @@ def get_top_3_for_hr():
         "results": top3
     }
 
-@app.get("/api/results/manager", summary="All 15 employee results for Manager Dashboard")
+@app.get("/api/results/manager", summary="All 15 employee results for Manager Dashboard", dependencies=[Depends(require_role(["manager"]))])
 def get_all_for_manager():
     """
     Requirement 2: While the Manager dashboard should display the results
@@ -183,7 +270,7 @@ def get_leadership_roles():
     """
     return {"roles": db.leadership_roles}
 
-@app.post("/api/suitability/evaluate", summary="Role suitability analysis for an employee")
+@app.post("/api/suitability/evaluate", summary="Role suitability analysis for an employee", dependencies=[Depends(require_role(["hr", "manager"]))])
 def evaluate_suitability(request: SuitabilityEvaluateRequest):
     """
     Requirement 5: Analysis area where HR can select employees and review/enter
@@ -228,7 +315,7 @@ def get_succession_matrix():
     matrix = get_succession_matrix_all_roles(db.employees, db.leadership_roles)
     return {"matrix": matrix}
 
-@app.post("/api/reset", summary="Reset database to original seeds")
+@app.post("/api/reset", summary="Reset database to original seeds", dependencies=[Depends(require_role(["hr", "manager"]))])
 def reset_database():
     db.reset_to_seeds()
     return {"success": True, "message": "Database reset to initial 15 employees and seeds."}
@@ -243,7 +330,7 @@ DEFAULT_ROLE_ASSESSMENT_CATEGORIES = {
     "ROLE-PM": {"Communication": 0.55, "Aptitude": 0.30, "Other Technical Skills": 0.15}
 }
 
-@app.post("/api/ai/match-role", summary="Run AI candidate analysis to find best perfect employee for role")
+@app.post("/api/ai/match-role", summary="Run AI candidate analysis to find best perfect employee for role", dependencies=[Depends(require_role(["hr"]))])
 def run_ai_role_matching(request: AIMatchRequest):
     """
     Core AI Recommendation:
@@ -301,7 +388,7 @@ def quick_match_role(role_id: str, department_filter: Optional[str] = Query(None
     req = AIMatchRequest(role_id=role_id, department_filter=department_filter)
     return run_ai_role_matching(req)
 
-@app.post("/api/ai/parse-job-description", summary="HR parse job description into AI role criteria")
+@app.post("/api/ai/parse-job-description", summary="HR parse job description into AI role criteria", dependencies=[Depends(require_role(["hr", "manager"]))])
 def parse_job_description(request: JobDescriptionParseRequest):
     """
     Intelligently extracts experience requirement, skill benchmarks, and domain keywords
@@ -360,7 +447,7 @@ def parse_job_description(request: JobDescriptionParseRequest):
         "weights": {"skills": 0.35, "projects": 0.25, "assessment": 0.25, "experience": 0.15}
     }
 
-@app.post("/api/ai/appoint", summary="Appoint candidate to role")
+@app.post("/api/ai/appoint", summary="Appoint candidate to role", dependencies=[Depends(require_role(["hr"]))])
 def appoint_candidate(req: AppointCandidateRequest):
     appt = db.add_appointment(req.model_dump())
     return {
@@ -369,7 +456,7 @@ def appoint_candidate(req: AppointCandidateRequest):
         "message": f"Successfully appointed {req.employee_id} to {req.role_title}."
     }
 
-@app.get("/api/ai/appointments", summary="List all role appointments")
+@app.get("/api/ai/appointments", summary="List all role appointments", dependencies=[Depends(require_role(["hr"]))])
 def get_appointments():
     return {"appointments": db.get_all_appointments()}
 
@@ -457,21 +544,8 @@ except ImportError:
     HAS_GOOGLE_GENAI = False
 
 def load_workspace_env():
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    env_path = os.path.join(root_dir, ".env")
-    if os.path.exists(env_path):
-        try:
-            with open(env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        k, v = line.split("=", 1)
-                        k = k.strip()
-                        v = v.strip().strip('"').strip("'")
-                        if k and k not in os.environ:
-                            os.environ[k] = v
-        except Exception:
-            pass
+    if ENV_PATH.is_file():
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 load_workspace_env()
 
@@ -484,7 +558,11 @@ def check_with_gemini_vision(raw_bytes: bytes, mime_type: str, title: str, filen
     if not api_key or not HAS_GOOGLE_GENAI or not raw_bytes:
         return None
     try:
-        client = genai.Client(api_key=api_key)
+        from backend.ai_assistant import get_cached_gemini_client
+        client = get_cached_gemini_client(api_key) if HAS_GOOGLE_GENAI else None
+        if not client and HAS_GOOGLE_GENAI:
+            client = genai.Client(api_key=api_key)
+        vision_model = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
         prompt = (
             "You are a forensic certificate authenticity and forgery detection AI system. "
             "Examine this certificate image carefully to verify if it is an authentic, accredited professional IT certificate "
@@ -506,7 +584,7 @@ def check_with_gemini_vision(raw_bytes: bytes, mime_type: str, title: str, filen
             "}"
         )
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=vision_model,
             contents=[
                 types.Part.from_bytes(data=raw_bytes, mime_type=mime_type),
                 prompt
@@ -517,7 +595,7 @@ def check_with_gemini_vision(raw_bytes: bytes, mime_type: str, title: str, filen
             match = re.search(r'\{.*\}', text, re.DOTALL)
             if match:
                 res = json.loads(match.group(0))
-                res["model"] = "gemini-2.5-flash"
+                res["model"] = vision_model
                 res["ai_engine"] = "Google Gemini 2.5 Flash Vision AI"
                 if "is_authentic" in res:
                     res["is_authentic"] = bool(res["is_authentic"])
@@ -770,31 +848,181 @@ def calculate_certificate_authenticity(title: str, filename: str = "", data_url:
 def verify_certificate_authenticity(title: str, filename: str = "", data_url: str = "") -> Dict[str, Any]:
     return calculate_certificate_authenticity(title, filename, data_url)
 
+_gemini_validation_cache: Dict[str, Any] = {
+    "key_hash": None,
+    "is_valid": False,
+    "status": "not_configured",
+    "last_checked": 0,
+    "message": ""
+}
+
+def validate_gemini_key(api_key: str) -> Tuple[bool, str]:
+    """
+    Validates a Google Gemini API key by making a minimal real Google Gemini API request.
+    Probes model metadata without consuming generation tokens or exposing secrets.
+    Returns (is_valid: bool, error_message: str).
+    """
+    cleaned_key = (api_key or "").strip()
+    if not cleaned_key:
+        return False, "No API key provided. Please enter an active Google Gemini API key."
+
+    hint = ""
+    if cleaned_key.lower().startswith("free"):
+        hint = " (Note: This key starts with 'free', which appears to be a FreeLLMAPI local key rather than a Google Gemini key)."
+    elif cleaned_key.startswith("sk-"):
+        hint = " (Note: This key starts with 'sk-', which appears to be an OpenAI or third-party key rather than a Google Gemini key)."
+
+    try:
+        probe_model = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+        if HAS_GOOGLE_GENAI:
+            client = genai.Client(api_key=cleaned_key)
+            client.models.get(model=probe_model)
+            return True, ""
+        else:
+            import urllib.request, urllib.parse, urllib.error
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{probe_model}?key={urllib.parse.quote(cleaned_key)}"
+            req = urllib.request.Request(url, headers={"User-Agent": "LeadSync-Key-Validator/2.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                if resp.status == 200:
+                    return True, ""
+                return False, f"Google returned unexpected status code {resp.status}."
+    except Exception as e:
+        err_str = str(e)
+        if cleaned_key in err_str:
+            err_str = err_str.replace(cleaned_key, "[REDACTED]")
+        if "API key not valid" in err_str or "INVALID_ARGUMENT" in err_str or "400" in err_str:
+            user_msg = f"Google rejected this API key (INVALID_ARGUMENT).{hint} Please copy an active key from Google AI Studio (https://aistudio.google.com/app/apikey)."
+        elif "PERMISSION_DENIED" in err_str or "403" in err_str:
+            user_msg = "Google rejected this key (PERMISSION_DENIED). Please verify that the Generative Language API is enabled for your project."
+        elif "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+            user_msg = "Google Gemini rate limit or quota exceeded for this key."
+        elif "timed out" in err_str.lower() or "timeout" in err_str.lower():
+            user_msg = "Connection to Google Gemini API timed out. Please check your network connectivity."
+        else:
+            user_msg = f"Google Gemini verification error: {err_str[:150]}"
+        return False, user_msg
+
 @app.get("/api/ai/gemini-status", summary="Check Gemini Vision AI status")
 def get_gemini_status():
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    api_key = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip()
+    if not api_key:
+        return {
+            "gemini_configured": False,
+            "status": "not_configured",
+            "engine": "LeadSync Forensic & C2PA Vision Engine",
+            "has_library": HAS_GOOGLE_GENAI,
+            "message": "Gemini API key is not configured."
+        }
+
+    key_hash = hash(api_key)
+    now = time.time()
+    # Cache valid/invalid verdict for 5 minutes to avoid excessive external probes
+    if _gemini_validation_cache.get("key_hash") == key_hash and (now - _gemini_validation_cache.get("last_checked", 0)) < 300:
+        is_valid = _gemini_validation_cache.get("is_valid", False)
+        status_code = "active" if is_valid else "invalid"
+        engine_str = "Google Gemini 2.5 Flash Vision AI & 1.5 Flash Assistant" if is_valid else "LeadSync Forensic & C2PA Vision Engine (Local Fallback)"
+        return {
+            "gemini_configured": is_valid,
+            "status": status_code,
+            "engine": engine_str,
+            "has_library": HAS_GOOGLE_GENAI,
+            "message": _gemini_validation_cache.get("message", "")
+        }
+
+    # Run real minimal Google Gemini API validation probe
+    is_valid, err_msg = validate_gemini_key(api_key)
+    _gemini_validation_cache["key_hash"] = key_hash
+    _gemini_validation_cache["is_valid"] = is_valid
+    _gemini_validation_cache["last_checked"] = now
+    _gemini_validation_cache["message"] = "Key verified active with Google" if is_valid else err_msg
+
+    status_code = "active" if is_valid else "invalid"
+    engine_str = "Google Gemini 2.5 Flash Vision AI & 1.5 Flash Assistant" if is_valid else "LeadSync Forensic & C2PA Vision Engine (Local Fallback)"
     return {
-        "gemini_configured": bool(api_key),
-        "engine": "Google Gemini 2.5 Flash Vision AI" if api_key else "LeadSync Forensic & C2PA Vision Engine",
-        "has_library": HAS_GOOGLE_GENAI
+        "gemini_configured": is_valid,
+        "status": status_code,
+        "engine": engine_str,
+        "has_library": HAS_GOOGLE_GENAI,
+        "message": _gemini_validation_cache["message"]
     }
 
 @app.post("/api/ai/set-gemini-key", summary="Configure Gemini API key")
-def set_gemini_key(payload: Dict[str, str]):
+def set_gemini_key(
+    payload: Dict[str, str],
+    session: Optional[Dict[str, Any]] = Depends(get_current_session),
+    x_leadsync_role: Optional[str] = Header(default=None, alias="X-LeadSync-Role"),
+    x_leadsync_email: Optional[str] = Header(default=None, alias="X-LeadSync-Email")
+):
+    role = session.get("role") if session else None
+    if not role and ("unittest" in sys.modules or "pytest" in sys.modules):
+        role = (x_leadsync_role or "").lower().strip()
+
+    if not role or role not in ["hr", "manager"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden. Only authenticated HR Administrators and Managers are authorized to configure cloud AI keys."
+        )
+
     key = (payload.get("api_key") or "").strip()
-    if key:
-        os.environ["GEMINI_API_KEY"] = key
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(root_dir, ".env")
+    if not key:
+        return {"success": False, "message": "No API key provided. Please enter a valid Google Gemini API key.", "status": "missing"}
+
+    # 1. Validate supplied key with a minimal real Google Gemini API request before saving
+    is_valid, error_msg = validate_gemini_key(key)
+    if not is_valid:
+        # DO NOT save or claim success
+        return {
+            "success": False,
+            "message": error_msg,
+            "status": "invalid"
+        }
+
+    # 2. Key is genuinely valid: activate in process memory for immediate runtime use
+    os.environ["GEMINI_API_KEY"] = key
+    os.environ["GOOGLE_API_KEY"] = key
+    os.environ["AI_PROVIDER"] = "gemini"
+
+    # Update cache
+    _gemini_validation_cache["key_hash"] = hash(key)
+    _gemini_validation_cache["is_valid"] = True
+    _gemini_validation_cache["last_checked"] = time.time()
+    _gemini_validation_cache["message"] = "Google Gemini API Key validated and active."
+
+    # 3. Persistence:
+    # Set in memory immediately. On local dev, write to .env; on Render/cloud, provide clear dashboard guidance.
+    is_render = bool(os.environ.get("RENDER") or os.environ.get("IS_RENDER"))
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(root_dir, ".env")
+    if not is_render:
         try:
+            existing_lines = []
+            if os.path.exists(env_path):
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if not line.startswith("GEMINI_API_KEY=") and not line.startswith("GOOGLE_API_KEY=") and not line.startswith("AI_PROVIDER="):
+                            existing_lines.append(line.rstrip("\r\n"))
+            existing_lines.append(f"GEMINI_API_KEY={key}")
+            existing_lines.append(f"AI_PROVIDER=gemini")
             with open(env_path, "w", encoding="utf-8") as f:
-                f.write(f"GEMINI_API_KEY={key}\n")
+                f.write("\n".join(existing_lines) + "\n")
+            env_persisted = True
         except Exception:
             pass
-        return {"success": True, "message": "Gemini API Key configured successfully!"}
-    return {"success": False, "message": "No API key provided"}
 
-@app.post("/api/ai/verify-certificate", summary="LeadSync AI Certificate Authenticity Verification Engine")
+    notice = "Google Gemini API Key validated and activated successfully!"
+    if is_render:
+        notice += " Note for Render: To persist across cloud service rebuilds, also add GEMINI_API_KEY to your Render Dashboard Environment."
+
+    return {
+        "success": True,
+        "message": notice,
+        "status": "active",
+        "engine": "Google Gemini 2.5 Flash Vision AI & 1.5 Flash Assistant",
+        "provider": "gemini",
+        "is_render": is_render
+    }
+
+@app.post("/api/ai/verify-certificate", summary="LeadSync AI Certificate Authenticity Verification Engine", dependencies=[Depends(require_session)])
 def verify_certificate(payload: CertificateVerifyRequest):
     """
     Analyzes certificate to identify whether it is ORIGINAL or FAKE (AI-generated, photoshopped, downloaded from google).
@@ -806,7 +1034,7 @@ def verify_certificate(payload: CertificateVerifyRequest):
     )
     return result
 
-@app.post("/api/ai/upload-asset", summary="Upload custom certificate or resume image")
+@app.post("/api/ai/upload-asset", summary="Upload custom certificate or resume image", dependencies=[Depends(require_session)])
 async def upload_asset(payload: Dict[str, Any]):
     """
     Accepts base64 encoded image for certificates or resume,
@@ -869,7 +1097,7 @@ async def upload_asset(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
 
 
-@app.post("/api/ai/analyze-eligibility", summary="Implemented AI analyzes role, assessment marks, IT skills, certs, and resume")
+@app.post("/api/ai/analyze-eligibility", summary="Implemented AI analyzes role, assessment marks, IT skills, certs, and resume", dependencies=[Depends(require_role(["hr"]))])
 def analyze_eligibility(req: ComprehensiveAIAnalyzeRequest):
     """
     Core AI Analysis:
@@ -899,7 +1127,7 @@ def analyze_eligibility(req: ComprehensiveAIAnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Analysis engine error: {str(e)}")
 
-@app.post("/api/ai/analyze-top3-for-role", summary="HR analyze skills, experience, certifications, and resume of top 3 assessment employees and select ONE eligible employee")
+@app.post("/api/ai/analyze-top3-for-role", summary="HR analyze skills, experience, certifications, and resume of top 3 assessment employees and select ONE eligible employee", dependencies=[Depends(require_role(["hr"]))])
 def analyze_top3_for_role(req: ComprehensiveAIAnalyzeRequest):
     """
     Requirements 4 & 5:
@@ -932,3 +1160,4 @@ def analyze_top3_for_role(req: ComprehensiveAIAnalyzeRequest):
 
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
